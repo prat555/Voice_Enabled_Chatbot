@@ -183,9 +183,9 @@ body {
 
 /* Copy button container to avoid overlaying text */
 .assistant-message .text { padding-right: 48px; }
-.copy-actions { position: absolute; top: 8px; right: 8px; display: none; gap: 6px; }
-.assistant-message .text:hover .copy-actions { display: flex; }
-.copy-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: rgba(0,0,0,0.06); color: var(--text-primary); cursor: pointer; }
+.copy-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity 0.2s ease; }
+.assistant-message .text:hover .copy-actions { opacity: 1; }
+.copy-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: rgba(0,0,0,0.06); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .dark .copy-btn { background: rgba(255,255,255,0.08); color: #e5e7eb; }
 .copy-btn:hover { background: rgba(0,0,0,0.12); }
 

@@ -159,7 +159,9 @@ class SpeechHandler {
         // Cancel any ongoing speech
         this.synthesis.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        // Clean the text by removing markdown symbols before speaking
+        const cleanText = this.cleanTextForSpeech(text);
+        const utterance = new SpeechSynthesisUtterance(cleanText);
         // Configure voice settings
         utterance.rate = this.voiceConfig.rate ?? 0.9;
         utterance.pitch = this.voiceConfig.pitch ?? 1.0;
@@ -201,6 +203,29 @@ class SpeechHandler {
 
         this.synthesis.speak(utterance);
         return true;
+    }
+
+    cleanTextForSpeech(text) {
+        return text
+            // Remove markdown headers (# ## ###, etc.)
+            .replace(/^#{1,6}\s+/gm, '')
+            // Remove horizontal rules (--- *** ___)
+            .replace(/^(---+|\*\*\*+|___+)\s*$/gm, ' ')
+            // Remove bold formatting (**text** or __text__)
+            .replace(/(\*\*|__)(.*?)\1/g, '$2')
+            // Remove italic formatting (*text* or _text_) - be careful not to affect list markers
+            .replace(/(?<![*\s_])[*_]([^*_\n]+?)[*_](?![*\s_])/g, '$1')
+            // Remove code blocks (```code``` or `code`)
+            .replace(/```[\s\S]*?```/g, '')
+            .replace(/`([^`]+)`/g, '$1')
+            // Remove link markdown [text](url)
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            // Clean up list markers
+            .replace(/^(\s*)([-*+]|\d+[\.\)])\s+/gm, '$1')
+            // Remove extra whitespace and normalize
+            .replace(/\n{3,}/g, '\n\n')
+            .replace(/^\s+|\s+$/g, '')
+            .trim();
     }
 
     stopSpeaking() {

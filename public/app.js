@@ -208,13 +208,14 @@ class VoiceChatbot {
         // First, split into blocks (paragraphs separated by double newlines)
         const blocks = text.split(/\n\n+/).filter(block => block.trim());
         let html = '';
+        let globalListCounters = {}; // Track numbering across the entire document
         
         for (let block of blocks) {
             block = block.trim();
             if (!block) continue;
             
-            // Check for horizontal rules
-            if (/^(---+|\*\*\*+|___+)\s*$/.test(block)) {
+            // Check for horizontal rules (need at least 3 chars and only whitespace after)
+            if (/^(---+|\*{3,}|_{3,})\s*$/.test(block)) {
                 html += '<hr>';
                 continue;
             }
@@ -228,137 +229,261 @@ class VoiceChatbot {
                 continue;
             }
             
-            // Check for lists (numbered or bulleted) - process entire block as one list
+            // Process each line individually to handle mixed content
             const lines = block.split('\n');
-            let listItems = [];
-            let isListBlock = true;
+            let currentListItems = [];
+            let pendingParagraph = '';
             
-            for (const line of lines) {
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmedLine = line.trim();
+                
+                if (!trimmedLine) continue; // Skip empty lines
+                
                 // Check for numbered list: 1. item or 1) item
                 const numberedMatch = line.match(/^(\s*)(\d+)[\.\)]\s+(.+)$/);
                 if (numberedMatch) {
+                    // If we have a pending paragraph, add it first
+                    if (pendingParagraph.trim()) {
+                        html += `<p>${this.processInlineMarkdown(pendingParagraph.trim())}</p>`;
+                        pendingParagraph = '';
+                    }
+                    
                     const indent = numberedMatch[1];
                     const content = this.processInlineMarkdown(numberedMatch[3]);
                     const level = Math.floor(indent.length / 4);
-                    listItems.push({ type: 'ol', level, content });
+                    
+                    // Initialize counter for this level if not exists
+                    if (!globalListCounters[level]) {
+                        globalListCounters[level] = 1;
+                    }
+                    
+                    currentListItems.push({ type: 'ol', level, content });
                     continue;
                 }
                 
                 // Check for bulleted list: - item, * item, + item
                 const bulletMatch = line.match(/^(\s*)[-\*\+]\s+(.+)$/);
                 if (bulletMatch) {
+                    // If we have a pending paragraph, add it first
+                    if (pendingParagraph.trim()) {
+                        html += `<p>${this.processInlineMarkdown(pendingParagraph.trim())}</p>`;
+                        pendingParagraph = '';
+                    }
+                    
                     const indent = bulletMatch[1];
                     const content = this.processInlineMarkdown(bulletMatch[2]);
                     const level = Math.floor(indent.length / 4);
-                    listItems.push({ type: 'ul', level, content });
+                    currentListItems.push({ type: 'ul', level, content });
                     continue;
                 }
                 
-                // If we hit a non-list line, this isn't a pure list block
-                isListBlock = false;
-                break;
+                // If we were building a list and hit a non-list line, output the list
+                if (currentListItems.length > 0) {
+                    html += this.buildSequentialNestedList(currentListItems, globalListCounters);
+                    currentListItems = [];
+                }
+                
+                // Regular line - add to pending paragraph
+                if (pendingParagraph) {
+                    pendingParagraph += ' ' + trimmedLine;
+                } else {
+                    pendingParagraph = trimmedLine;
+                }
             }
             
-            // Process list if we found one and it's a pure list block
-            if (isListBlock && listItems.length > 0) {
-                html += this.buildContinuousNestedList(listItems);
-                continue;
+            // Process any remaining list items
+            if (currentListItems.length > 0) {
+                html += this.buildSequentialNestedList(currentListItems, globalListCounters);
             }
             
-            // Regular paragraph - process inline markdown
-            const processedContent = this.processInlineMarkdown(block.replace(/\n/g, '<br>'));
-            html += `<p>${processedContent}</p>`;
+            // Process any remaining paragraph content
+            if (pendingParagraph.trim()) {
+                html += `<p>${this.processInlineMarkdown(pendingParagraph.trim())}</p>`;
+            }
         }
         
         return html;
     }
     
-    // Process inline markdown (bold, italic, code, etc.)
+    // Process inline markdown (bold, italic, code, links)
     processInlineMarkdown(text) {
-        return text
-            // Convert **bold** to <strong>
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            // Convert *italic* to <em> (avoid conflicts with list markers)
-            .replace(/(?<![*\s])\*([^*\n]+?)\*(?![*\s])/g, '<em>$1</em>')
-            // Convert `code` to <code>
-            .replace(/`(.*?)`/g, '<code>$1</code>')
-            // Convert [link text](url) to <a>
-            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        let out = text;
+        // 1) Inline code first to avoid styling inside code
+        out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // 2) Bold (** or __)
+        out = out.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+        // 3) Italic with asterisks: allow start or whitespace before, and punctuation/space/end after
+        //    Do not match list bullets (asterisk followed by space) by requiring first inner char non-space
+        out = out.replace(/(^|[\s(])\*([^\s*][^*]*?)\*(?=[\s).,!?:;"\]]|$)/g, '$1<em>$2</em>');
+        // 4) Italic with underscores: similar rules
+        out = out.replace(/(^|[\s(])_([^\s_][^_]*?)_(?=[\s).,!?:;"\]]|$)/g, '$1<em>$2</em>');
+        // 5) Links
+        out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        return out;
     }
 
-    // Convert HTML to clean plain text for copying
+    // Convert HTML to clean markdown text for copying
     htmlToPlainText(html) {
         // Create a temporary div to parse HTML
         const temp = document.createElement('div');
         temp.innerHTML = html;
-        
-        // Process specific elements
-        const processNode = (node) => {
+
+        // Depth-aware recursive processor that emits valid Markdown
+        const processNode = (node, ctx = { inListItem: false, depth: 0 }) => {
             if (node.nodeType === Node.TEXT_NODE) {
                 return node.textContent;
             }
-            
+
             if (node.nodeType === Node.ELEMENT_NODE) {
-                let result = '';
                 const tagName = node.tagName.toLowerCase();
-                
-                // Handle different HTML elements
+                let result = '';
+
+                // Indentation for nested lists (2 spaces per depth level)
+                const indent = '  '.repeat(ctx.depth);
+
                 switch (tagName) {
                     case 'h1':
                     case 'h2':
                     case 'h3':
                     case 'h4':
                     case 'h5':
-                    case 'h6':
-                        result += '\n\n' + node.textContent + '\n\n';
+                    case 'h6': {
+                        // Copy headings as bold text instead of # to avoid symbol noise
+                        const headingText = node.textContent.trim();
+                        if (ctx.inListItem) {
+                            result += '**' + headingText + '**';
+                        } else {
+                            result += '\n\n**' + headingText + '**\n\n';
+                        }
                         break;
-                    case 'p':
-                        result += node.textContent + '\n\n';
+                    }
+                    case 'p': {
+                        const text = node.textContent.trim();
+                        result += ctx.inListItem ? text : text + '\n\n';
                         break;
+                    }
                     case 'br':
                         result += '\n';
                         break;
                     case 'hr':
-                        result += '\n---\n\n';
+                        // Skip explicit ---; keep a blank line separation only
+                        result += '\n\n';
                         break;
-                    case 'ul':
-                    case 'ol':
-                        // Process list items
-                        for (let child of node.children) {
-                            if (child.tagName.toLowerCase() === 'li') {
-                                const prefix = tagName === 'ol' ? '• ' : '• ';
-                                result += prefix + child.textContent + '\n';
+                    case 'ul': {
+                        // Emit markdown bullets using '-' to avoid stray asterisks
+                        for (let li of node.children) {
+                            if (li.tagName.toLowerCase() !== 'li') continue;
+                            // Split head content and nested lists
+                            const nestedLists = [];
+                            const headNodes = [];
+                            for (let child of li.childNodes) {
+                                if (child.nodeType === Node.ELEMENT_NODE) {
+                                    const tn = child.tagName.toLowerCase();
+                                    if (tn === 'ul' || tn === 'ol') {
+                                        nestedLists.push(child);
+                                        continue;
+                                    }
+                                }
+                                headNodes.push(child);
+                            }
+                            // Build head text from parts with proper spacing between segments
+                            const headSegments = [];
+                            for (let part of headNodes) {
+                                const seg = processNode(part, { inListItem: true, depth: ctx.depth }).trim();
+                                if (seg) headSegments.push(seg);
+                            }
+                            let headText = headSegments.join(' ').replace(/\s{2,}/g, ' ');
+                            headText = headText
+                                .replace(/^\s*\n+/, '')
+                                .replace(/\n+\s*$/, '')
+                                .replace(/\n\s*\n/g, '\n');
+
+                            result += `${indent}- ${headText}\n`;
+
+                            // Process nested lists with increased depth
+                            for (let nl of nestedLists) {
+                                result += processNode(nl, { inListItem: false, depth: ctx.depth + 1 });
+                            }
+                        }
+                        // Add a separating newline after a list
+                        result += '\n';
+                        break;
+                    }
+                    case 'ol': {
+                        let startNum = parseInt(node.getAttribute('start')) || 1;
+                        let counter = startNum;
+                        for (let li of node.children) {
+                            if (li.tagName.toLowerCase() !== 'li') continue;
+                            const nestedLists = [];
+                            const headNodes = [];
+                            for (let child of li.childNodes) {
+                                if (child.nodeType === Node.ELEMENT_NODE) {
+                                    const tn = child.tagName.toLowerCase();
+                                    if (tn === 'ul' || tn === 'ol') {
+                                        nestedLists.push(child);
+                                        continue;
+                                    }
+                                }
+                                headNodes.push(child);
+                            }
+                            const headSegments = [];
+                            for (let part of headNodes) {
+                                const seg = processNode(part, { inListItem: true, depth: ctx.depth }).trim();
+                                if (seg) headSegments.push(seg);
+                            }
+                            let headText = headSegments.join(' ').replace(/\s{2,}/g, ' ');
+                            headText = headText
+                                .replace(/^\s*\n+/, '')
+                                .replace(/\n+\s*$/, '')
+                                .replace(/\n\s*\n/g, '\n');
+
+                            result += `${indent}${counter}. ${headText}\n`;
+                            counter++;
+
+                            // Process nested lists with increased depth
+                            for (let nl of nestedLists) {
+                                result += processNode(nl, { inListItem: false, depth: ctx.depth + 1 });
                             }
                         }
                         result += '\n';
                         break;
+                    }
                     case 'strong':
-                        result += node.textContent; // Remove bold formatting
+                        result += '**' + node.textContent + '**';
                         break;
                     case 'em':
-                        result += node.textContent; // Remove italic formatting
+                        // Use underscores for italics to avoid lone '*'
+                        result += '_' + node.textContent + '_';
                         break;
                     case 'code':
-                        result += node.textContent; // Remove code formatting
+                        result += '`' + node.textContent + '`';
                         break;
-                    default:
-                        // For other elements, just get text content
-                        result += node.textContent;
+                    case 'a': {
+                        const href = node.getAttribute('href');
+                        result += href ? `[${node.textContent}](${href})` : node.textContent;
                         break;
+                    }
+                    default: {
+                        for (let child of node.childNodes) {
+                            result += processNode(child, ctx);
+                        }
+                        break;
+                    }
                 }
-                
+
                 return result;
             }
-            
+
             return '';
         };
-        
+
         // Process all child nodes
         let plainText = '';
         for (let child of temp.childNodes) {
-            plainText += processNode(child);
+            plainText += processNode(child, { inListItem: false, depth: 0 });
         }
-        
+
         // Clean up extra whitespace and newlines
         return plainText
             .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with 2
@@ -366,9 +491,116 @@ class VoiceChatbot {
             .replace(/\n+$/, '') // Remove trailing newlines
             .trim();
     }
+
+    // Convert HTML to plain human-readable text (no markdown symbols)
+    htmlToPlainReadable(html) {
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        const processNode = (node, ctx = { inListItem: false, depth: 0 }) => {
+            if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+            if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+            const tag = node.tagName.toLowerCase();
+            let out = '';
+
+            const indent = '  '.repeat(ctx.depth);
+
+            switch (tag) {
+                case 'h1':
+                case 'h2':
+                case 'h3':
+                case 'h4':
+                case 'h5':
+                case 'h6': {
+                    const text = node.textContent.trim();
+                    out += (ctx.inListItem ? '' : '\n\n') + text + (ctx.inListItem ? '' : '\n\n');
+                    break;
+                }
+                case 'p':
+                    out += node.textContent.trim() + (ctx.inListItem ? '' : '\n\n');
+                    break;
+                case 'br':
+                    out += '\n';
+                    break;
+                case 'hr':
+                    out += '\n\n';
+                    break;
+                case 'ul': {
+                    for (let li of node.children) {
+                        if (li.tagName.toLowerCase() !== 'li') continue;
+                        // Split head and nested lists
+                        const nested = [];
+                        const head = [];
+                        for (let child of li.childNodes) {
+                            if (child.nodeType === Node.ELEMENT_NODE && ['ul','ol'].includes(child.tagName.toLowerCase())) {
+                                nested.push(child);
+                            } else {
+                                head.push(child);
+                            }
+                        }
+                        let headText = '';
+                        for (let part of head) headText += processNode(part, { inListItem: true, depth: ctx.depth });
+                        headText = headText.replace(/^\s*\n+/, '').replace(/\n+\s*$/, '').replace(/\n\s*\n/g, '\n');
+                        out += `${indent}• ${headText}\n`;
+                        for (let nl of nested) out += processNode(nl, { inListItem: false, depth: ctx.depth + 1 });
+                    }
+                    out += '\n';
+                    break;
+                }
+                case 'ol': {
+                    let start = parseInt(node.getAttribute('start')) || 1;
+                    let n = start;
+                    for (let li of node.children) {
+                        if (li.tagName.toLowerCase() !== 'li') continue;
+                        const nested = [];
+                        const head = [];
+                        for (let child of li.childNodes) {
+                            if (child.nodeType === Node.ELEMENT_NODE && ['ul','ol'].includes(child.tagName.toLowerCase())) {
+                                nested.push(child);
+                            } else {
+                                head.push(child);
+                            }
+                        }
+                        let headText = '';
+                        for (let part of head) headText += processNode(part, { inListItem: true, depth: ctx.depth });
+                        headText = headText.replace(/^\s*\n+/, '').replace(/\n+\s*$/, '').replace(/\n\s*\n/g, '\n');
+                        out += `${indent}${n}. ${headText}\n`;
+                        n++;
+                        for (let nl of nested) out += processNode(nl, { inListItem: false, depth: ctx.depth + 1 });
+                    }
+                    out += '\n';
+                    break;
+                }
+                case 'strong':
+                case 'em':
+                case 'code':
+                    out += node.textContent;
+                    break;
+                case 'a': {
+                    const href = node.getAttribute('href');
+                    const text = node.textContent;
+                    out += href ? `${text} (${href})` : text;
+                    break;
+                }
+                default:
+                    for (let child of node.childNodes) out += processNode(child, ctx);
+            }
+
+            return out;
+        };
+
+        let text = '';
+        for (let child of temp.childNodes) text += processNode(child, { inListItem: false, depth: 0 });
+        return text
+            .replace(/\n{3,}/g, '\n\n')
+            .replace(/^\n+/, '')
+            .replace(/\n+$/, '')
+            .trim();
+    }
     
-    // Build properly nested lists with continuous numbering
-    buildContinuousNestedList(items) {
+    // Build properly nested lists with sequential numbering across the document
+    buildSequentialNestedList(items, globalCounters) {
         if (items.length === 0) return '';
         
         let html = '';
@@ -385,7 +617,16 @@ class VoiceChatbot {
                 // Going deeper - open new lists
                 for (let j = lastLevel + 1; j <= level; j++) {
                     const listTag = type === 'ol' ? 'ol' : 'ul';
-                    html += `<${listTag}>`;
+                    
+                    // For ordered lists, set the start value based on global counter
+                    if (type === 'ol' && globalCounters[j]) {
+                        html += `<${listTag} start="${globalCounters[j]}">`;
+                    } else {
+                        html += `<${listTag}>`;
+                        if (type === 'ol' && !globalCounters[j]) {
+                            globalCounters[j] = 1;
+                        }
+                    }
                     stack.push({ tag: `</${listTag}>`, type: type, level: j });
                 }
             } else if (level < lastLevel) {
@@ -396,23 +637,106 @@ class VoiceChatbot {
                         html += stack.pop().tag;
                     }
                 }
-            }
-            
-            // If we're at the same level but different type, we need separate lists
-            // For numbered lists, we want to continue numbering across the document
-            if (level === lastLevel && type !== lastType && stack.length > 0) {
-                // Don't close the previous list if it would break numbering
-                // Instead, close and immediately reopen with the new type
+            } else if (level === lastLevel && type !== lastType && stack.length > 0) {
+                // Same level but different type - close and reopen
                 const prevStackItem = stack.pop();
                 html += prevStackItem.tag;
                 
                 const listTag = type === 'ol' ? 'ol' : 'ul';
-                html += `<${listTag}>`;
+                if (type === 'ol' && globalCounters[level]) {
+                    html += `<${listTag} start="${globalCounters[level]}">`;
+                } else {
+                    html += `<${listTag}>`;
+                    if (type === 'ol' && !globalCounters[level]) {
+                        globalCounters[level] = 1;
+                    }
+                }
                 stack.push({ tag: `</${listTag}>`, type: type, level: level });
             }
             
             // Add the list item
             html += `<li>${content}</li>`;
+            
+            // Increment counter for ordered lists
+            if (type === 'ol') {
+                if (!globalCounters[level]) {
+                    globalCounters[level] = 1;
+                }
+                globalCounters[level]++;
+            }
+            
+            lastLevel = level;
+            lastType = type;
+        }
+        
+        // Close all remaining lists
+        while (stack.length > 0) {
+            html += stack.pop().tag;
+        }
+        
+        return html;
+    }
+
+    // Build properly nested lists with continuous numbering
+    buildContinuousNestedList(items) {
+        if (items.length === 0) return '';
+        
+        let html = '';
+        let stack = [];
+        let lastLevel = -1;
+        let lastType = null;
+        let olCounters = {}; // Track numbering for each level
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const { type, level, content } = item;
+            
+            // Handle level changes
+            if (level > lastLevel) {
+                // Going deeper - open new lists
+                for (let j = lastLevel + 1; j <= level; j++) {
+                    const listTag = type === 'ol' ? 'ol' : 'ul';
+                    // Initialize counter for this level if it's an ordered list
+                    if (type === 'ol' && !olCounters[j]) {
+                        olCounters[j] = 1;
+                    }
+                    html += `<${listTag}>`;
+                    stack.push({ tag: `</${listTag}>`, type: type, level: j });
+                }
+            } else if (level < lastLevel) {
+                // Going back - close lists and clear deeper counters
+                const levelsToClose = lastLevel - level;
+                for (let j = 0; j < levelsToClose; j++) {
+                    if (stack.length > 0) {
+                        const poppedItem = stack.pop();
+                        html += poppedItem.tag;
+                        // Clear counters for levels we're closing
+                        if (poppedItem.type === 'ol') {
+                            delete olCounters[poppedItem.level];
+                        }
+                    }
+                }
+            } else if (level === lastLevel && type !== lastType && stack.length > 0) {
+                // Same level but different type - close and reopen
+                const prevStackItem = stack.pop();
+                html += prevStackItem.tag;
+                
+                const listTag = type === 'ol' ? 'ol' : 'ul';
+                if (type === 'ol' && !olCounters[level]) {
+                    olCounters[level] = 1;
+                }
+                html += `<${listTag}>`;
+                stack.push({ tag: `</${listTag}>`, type: type, level: level });
+            }
+            
+            // Add the list item with proper numbering
+            html += `<li>${content}</li>`;
+            
+            // Increment counter for ordered lists
+            if (type === 'ol' && olCounters[level]) {
+                olCounters[level]++;
+            }
+            
             lastLevel = level;
             lastType = type;
         }
@@ -431,6 +755,84 @@ class VoiceChatbot {
         return this.buildContinuousNestedList(items);
     }
 
+    copyToClipboardFallback(text) {
+        // Create a temporary textarea element
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        
+        // Make it invisible but not display:none (which would break copying)
+        textArea.style.position = 'fixed';
+        textArea.style.top = '-1000px';
+        textArea.style.left = '-1000px';
+        textArea.style.opacity = '0';
+        textArea.style.pointerEvents = 'none';
+        
+        document.body.appendChild(textArea);
+        
+        try {
+            // Select the text
+            textArea.focus();
+            textArea.select();
+            textArea.setSelectionRange(0, 99999); // For mobile devices
+            
+            // Execute copy command
+            const successful = document.execCommand('copy');
+            
+            if (!successful) {
+                throw new Error('Copy command failed');
+            }
+        } finally {
+            // Clean up
+            document.body.removeChild(textArea);
+        }
+    }
+
+    async copyAsRichText(html, plainText) {
+        // Try the async Clipboard API with text/html and text/plain
+        if (navigator.clipboard && window.ClipboardItem) {
+            try {
+                const htmlBlob = new Blob([html], { type: 'text/html' });
+                const textBlob = new Blob([plainText], { type: 'text/plain' });
+                const item = new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob });
+                await navigator.clipboard.write([item]);
+                return;
+            } catch (err) {
+                console.warn('ClipboardItem rich copy failed, falling back:', err);
+            }
+        }
+
+        // Fallback: selection-based copy using a hidden, contenteditable container
+        try {
+            const container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            container.setAttribute('contenteditable', 'true');
+            container.innerHTML = html;
+            document.body.appendChild(container);
+
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(container);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            const ok = document.execCommand('copy');
+            selection.removeAllRanges();
+            document.body.removeChild(container);
+            if (ok) return;
+        } catch (e) {
+            console.warn('Selection-based rich copy failed:', e);
+        }
+
+        // Last resort: plain text only
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(plainText);
+        } else {
+            this.copyToClipboardFallback(plainText);
+        }
+    }
+
     addMessage(content, role) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message`;
@@ -438,29 +840,54 @@ class VoiceChatbot {
         const now = new Date();
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
-        // Use markdown rendering for assistant messages, escape HTML for user messages
-        const processedContent = role === 'assistant' ? this.markdownToHtml(content) : this.escapeHtml(content);
+    // Use markdown rendering for assistant messages, escape HTML for user messages
+    const processedContent = role === 'assistant' ? this.markdownToHtml(content) : this.escapeHtml(content);
         
         messageDiv.innerHTML = `
             <div class="message-content">
                 <i class="fas fa-${role === 'user' ? 'user' : 'robot'}"></i>
-                <div class="text">${processedContent}${role === 'assistant' ? '<div class="copy-actions"><button class="copy-btn" title="Copy"><i class="fas fa-copy"></i></button></div>' : ''}</div>
+                <div class="text">${processedContent}${role === 'assistant' ? '<div class="copy-actions"><button class="copy-btn copy-plain" title="Copy text"><i class="fas fa-copy"></i></button></div>' : ''}</div>
             </div>
             <div class="message-time">${timeString}</div>
         `;
 
         this.elements.chatMessages.appendChild(messageDiv);
+        // Attach original assistant markdown for precise copy
+        if (role === 'assistant') {
+            const textEl = messageDiv.querySelector('.text');
+            if (textEl) {
+                // Store raw markdown as a data attribute for reliable copying
+                textEl.setAttribute('data-raw-md', content);
+            }
+        }
         this.scrollToBottom();
 
         // Enable copy-to-clipboard on assistant bubbles
         if (role === 'assistant') {
-            const copyBtn = messageDiv.querySelector('.copy-btn');
-            copyBtn?.addEventListener('click', async (e) => {
+            const copyPlainBtn = messageDiv.querySelector('.copy-btn.copy-plain');
+
+            // Single copy: Rich text (HTML) + plain text fallback
+            copyPlainBtn?.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                // Convert HTML back to clean plain text for copying
-                const cleanText = this.htmlToPlainText(processedContent);
-                await navigator.clipboard.writeText(cleanText);
-                this.showNotification('Copied to clipboard', 'success');
+                try {
+                    const plain = this.htmlToPlainReadable(processedContent);
+                    await this.copyAsRichText(processedContent, plain);
+                    this.showNotification('Copied text', 'success');
+                } catch (error) {
+                    console.error('Copy (rich) failed:', error);
+                    // As ultimate fallback, try plain text only
+                    try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                            await navigator.clipboard.writeText(plain);
+                        } else {
+                            this.copyToClipboardFallback(plain);
+                        }
+                        this.showNotification('Copied text', 'success');
+                    } catch (err2) {
+                        console.error('Copy fallback failed:', err2);
+                        this.showNotification('Failed to copy text', 'error');
+                    }
+                }
             });
         }
 
@@ -554,11 +981,10 @@ class VoiceChatbot {
             this.updateConnectionStatus(isConnected);
             
             if (isConnected) {
-                const data = await response.json();
-                console.log('Server health check:', data);
+                await response.json();
             }
         } catch (error) {
-            console.error('Server connection check failed:', error);
+            // Silent on failure; UI status will show disconnected
             this.updateConnectionStatus(false);
         }
     }
@@ -663,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved === 'dark') document.documentElement.classList.add('dark');
     // Update toggle icon
     chatbot.updateThemeIcon();
-    console.log('Voice-enabled chatbot initialized successfully');
+    // App initialized
 });
 
 // Handle any unhandled errors

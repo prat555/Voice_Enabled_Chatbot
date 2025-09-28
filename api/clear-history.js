@@ -13,10 +13,10 @@ export default function handler(req, res) {
       message: 'Chat history cleared'
     });
   } else if (req.method === 'GET') {
-    // Get history
+    // Return empty history to enforce stateless behavior
     res.json({
       success: true,
-      history: chatHistory
+      history: []
     });
   } else {
     res.status(405).json({ success: false, error: 'Method not allowed' });

@@ -1,240 +1,154 @@
 # Voice-Enabled Chatbot 🤖🎤
 
-A modern, voice-enabled chatbot powered by Google's Gemini Pro API with speech recognition and text-to-speech capabilities. Chat using your voice or text input with a beautiful, responsive web interface.
+A modern, voice-enabled chatbot powered by Google Gemini with speech recognition and text-to-speech (TTS). Use your voice or type in a sleek, responsive UI with dark mode, quick suggestions, and customizable voice settings.
 
 ## Features ✨
 
-- **Voice Input**: Speak to the chatbot using Web Speech API
-- **Voice Output**: Hear responses with text-to-speech synthesis
-- **Text Chat**: Traditional text input and output
-- **Continuous Listening**: Optional always-on voice recognition
-- **Chat History**: Persistent conversation memory
-- **Responsive Design**: Works on desktop and mobile devices
-- **Real-time Status**: Connection and speech support indicators
-- **Error Handling**: Comprehensive error management and user feedback
+- Voice input with the Web Speech API (SpeechRecognition)
+- Voice output via TTS with adjustable voice/rate/pitch/volume
+- Theme toggle (light/dark) with persistence
+- Typing indicator while the model thinks
+- Quick suggestion chips to jumpstart prompts
+- Copy-to-clipboard on assistant messages (hover top-right)
+- Scroll-to-bottom floating button for long chats
+- Continuous listening and auto-speak controls
+- Connection and speech support indicators
+- Input validation and error handling throughout
 
 ## Prerequisites 📋
 
-- **Node.js** (version 16.0.0 or higher)
-- **npm** (comes with Node.js)
-- **Google Gemini Pro API Key** (get it from [Google AI Studio](https://makersuite.google.com/app/apikey))
-- **Modern Web Browser** with speech recognition support (Chrome, Edge, Safari, Firefox)
+- Node.js 16+ (Node 18+ recommended)
+- npm (bundled with Node.js)
+- A Google Gemini API key (create one in Google AI Studio)
+- A modern browser (best: Chrome/Edge; partial: Safari/Firefox)
 
-## Installation 🚀
+## Quick Start 🚀
 
-1. **Clone or download this repository**
-   ```bash
-   cd voice_enabled_chatbot
-   ```
+1) Install dependencies
+```bash
+npm install
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+2) Configure environment
+Create a file named `.env` in the project root:
+```
+GEMINI_API_KEY=your_api_key_here
+PORT=3000
+NODE_ENV=development
+```
 
-3. **Environment setup**
-   - The `.env` file is already created with your API key
-   - Your Gemini API key is: `AIzaSyDLGqENObFSBHAXlG3ljuWg9dRz4Vapnd4`
+3) Start the server
+```bash
+npm start
+```
 
-4. **Start the server**
-   ```bash
-   npm start
-   ```
-   
-   For development with auto-restart:
-   ```bash
-   npm run dev
-   ```
+4) Open the app
+- Visit http://localhost:3000
+- Allow microphone access when prompted
 
-5. **Open your browser**
-   - Navigate to `http://localhost:3000`
-   - Allow microphone access when prompted
+## Using the App 📖
 
-## Usage Guide 📖
+- Mic button: start/stop listening
+- Stop button: immediately stop speaking
+- Send button or Enter: send typed message
+- Auto-speak: automatically speak assistant replies
+- Continuous listening: resumes listening after responses
+- Theme toggle: switch light/dark; saved to localStorage
+- Settings (gear): pick a TTS voice and adjust rate/pitch/volume
+- Copy icon on assistant bubbles: copy the response text
 
-### Voice Interaction
-1. **Click the microphone button** 🎤 to start voice recognition
-2. **Speak clearly** into your microphone
-3. The bot will process your speech and respond both in text and voice
-4. **Toggle continuous listening** for hands-free conversation
+## Model Configuration 🤖
 
-### Text Interaction
-1. **Type your message** in the text input field
-2. **Press Enter** or click the send button ➤
-3. The bot will respond in text (and voice if auto-speak is enabled)
+By default, the app uses:
 
-### Controls
-- **🎤 Microphone Button**: Click to toggle voice recognition
-- **➤ Send Button**: Send typed messages
-- **🗑️ Clear Chat**: Clear conversation history
-- **🔊 Auto-speak**: Toggle automatic voice responses
-- **🎙️ Continuous Listening**: Enable always-on voice recognition
+- Model: `gemini-2.5-flash`
 
-## Browser Compatibility 🌐
+You can change the model by editing `src/gemini-chatbot.js`:
+```js
+// src/gemini-chatbot.js
+this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+```
+Depending on your API key access, other valid options may include (subject to availability):
 
-### Speech Recognition Support
-- ✅ **Chrome/Chromium** (full support)
-- ✅ **Microsoft Edge** (full support)
-- ✅ **Safari** (limited support)
-- ⚠️ **Firefox** (limited support)
+- `gemini-2.5-pro`
+- `gemini-flash-latest`
+- `gemini-pro-latest`
 
-### Text-to-Speech Support
-- ✅ **All modern browsers** support text-to-speech
+Tip: If you see a 404 for a model, list available models using the REST API:
+```bash
+curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY"
+```
 
 ## API Endpoints 🔌
 
-### Chat API
 ```
-POST /api/chat
-Content-Type: application/json
-
-{
-  "message": "Hello, how are you?"
-}
-```
-
-### Clear History
-```
-POST /api/clear-history
-```
-
-### Get History
-```
-GET /api/history
-```
-
-### Health Check
-```
-GET /api/health
+POST /api/chat           # { message: string }
+POST /api/clear-history  # clears in-memory history
+GET  /api/history        # returns in-memory history
+GET  /api/health         # health/status info
 ```
 
 ## Project Structure 📁
 
 ```
 voice_enabled_chatbot/
-├── .env                    # Environment variables (API key)
-├── .gitignore             # Git ignore rules
-├── package.json           # Project dependencies and scripts
-├── README.md             # This file
+├── .env                     # Environment variables (not checked in)
+├── .gitignore               # Includes .env, node_modules, etc.
+├── package.json             # Scripts and deps
+├── README.md                # This file
 ├── src/
-│   ├── server.js         # Express.js server
-│   └── gemini-chatbot.js # Gemini API integration
+│   ├── server.js            # Express server + CSP
+│   └── gemini-chatbot.js    # Gemini API wrapper
 └── public/
-    ├── index.html        # Main web interface
-    ├── styles.css        # Styling and animations
-    ├── app.js           # Main application logic
-    └── speech-handler.js # Speech recognition & TTS
+    ├── index.html           # UI skeleton + modals
+    ├── styles.css           # Theming, layout, animations
+    ├── app.js               # Frontend logic & UI state
+    └── speech-handler.js    # Speech recognition & synthesis
 ```
 
 ## Configuration ⚙️
 
-### Environment Variables
-- `GEMINI_API_KEY`: Your Google Gemini Pro API key
-- `PORT`: Server port (default: 3000)
-- `NODE_ENV`: Environment mode (development/production)
+Environment variables (in `.env`):
 
-### Speech Settings
-You can modify speech settings in `public/speech-handler.js`:
-- **Language**: Change `this.recognition.lang = 'en-US'`
-- **Voice Rate**: Modify `utterance.rate = 0.9`
-- **Voice Pitch**: Adjust `utterance.pitch = 1.0`
-- **Voice Volume**: Set `utterance.volume = 0.8`
+- `GEMINI_API_KEY` (required): your Google Gemini API key
+- `PORT` (optional): server port (default used here: 3000)
+- `NODE_ENV` (optional): `development` or `production`
+
+Speech settings can be changed live in the Settings modal (saved to localStorage). Recognition language is set in `public/speech-handler.js` via:
+```js
+this.recognition.lang = 'en-US';
+```
+
+## Browser Compatibility 🌐
+
+Speech Recognition:
+- ✅ Chrome/Chromium, Edge
+- ⚠️ Safari/Firefox: partial/behind flags
+
+Text-to-Speech:
+- ✅ All modern browsers (voice list depends on OS/browser)
 
 ## Troubleshooting 🔧
 
-### Common Issues
+- 404 model not found: Use a valid model (e.g., `gemini-2.5-flash`) available to your key.
+- Port already in use: change `PORT` in `.env`.
+- Mic blocked: allow microphone access in the address bar and refresh.
+- Speech not supported: try Chrome/Edge or ensure site is served over HTTP(S).
+- Icons not visible: CSP allows cdnjs; ensure internet access to the CDN.
 
-1. **"Speech recognition not supported"**
-   - Use Chrome, Edge, or Safari
-   - Ensure HTTPS (required for speech APIs)
-   - Check browser permissions for microphone
+## Security 🔒
 
-2. **"Microphone access denied"**
-   - Click the microphone icon in address bar
-   - Allow microphone access
-   - Refresh the page
-
-3. **"API key invalid"**
-   - Check your `.env` file
-   - Verify the API key is correct
-   - Ensure no extra spaces in the key
-
-4. **"Connection error"**
-   - Check your internet connection
-   - Verify the server is running on port 3000
-   - Check firewall settings
-
-5. **No voice output**
-   - Check device volume
-   - Ensure "Auto-speak responses" is enabled
-   - Try different browsers
-
-### Performance Tips
-
-- **Use Chrome** for best speech recognition performance
-- **Speak clearly** and at normal pace
-- **Minimize background noise** for better recognition
-- **Use headphones** to prevent feedback loops
-
-## Development 🛠️
-
-### Running in Development Mode
-```bash
-npm run dev
-```
-This uses `nodemon` for automatic server restarts when files change.
-
-### Adding New Features
-1. **Backend changes**: Modify files in `src/`
-2. **Frontend changes**: Modify files in `public/`
-3. **API changes**: Update endpoints in `src/server.js`
-
-### Testing the API
-```bash
-# Test chat endpoint
-curl -X POST http://localhost:3000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello!"}'
-
-# Test health endpoint
-curl http://localhost:3000/api/health
-```
-
-## Security Considerations 🔒
-
-- API key is stored in `.env` file (not committed to git)
-- HTTPS recommended for production (required for speech APIs)
-- Input validation prevents malicious content
-- Rate limiting can be added for production use
-- CORS configured for security
-
-## License 📄
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing 🤝
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Support 💬
-
-If you encounter any issues or have questions:
-1. Check the troubleshooting section above
-2. Review browser console for error messages
-3. Ensure all prerequisites are met
-4. Verify API key configuration
+- Keep `.env` out of version control (already in `.gitignore`).
+- Never hardcode API keys in source files or the README.
+- Use HTTPS in production (required for some browser APIs and good practice).
 
 ## Acknowledgments 🙏
 
-- **Google Gemini Pro** for AI capabilities
-- **Web Speech API** for voice recognition
-- **Express.js** for server framework
-- **Font Awesome** for icons
+- Google Gemini for AI capabilities
+- Web Speech API for recognition and TTS
+- Express.js for the server
+- Font Awesome for icons (via cdnjs)
 
 ---
 
-**Happy chatting! 🎉**
+Happy chatting! 🎉

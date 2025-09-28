@@ -79,10 +79,12 @@
 
             <footer class="composer">
                 <div class="voice-bar">
-                    <button id="micButton" class="mic-button" title="Start/stop listening">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <div class="voice-status" id="voiceStatus">Ready to listen</div>
+                    <div class="voice-controls-left">
+                        <button id="micButton" class="mic-button" title="Start/stop listening">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <div class="voice-status" id="voiceStatus">Ready to listen</div>
+                    </div>
                     <div class="voice-controls-right">
                         <button id="stopSpeaking" class="stop-speaking-btn" title="Stop speaking" aria-label="Stop speaking">
                             <i class="fas fa-stop"></i>
@@ -94,7 +96,9 @@
                 </div>
 
                 <div class="input-row">
-                    <textarea id="messageInput" placeholder="Message Gemini…" rows="3" maxlength="1000"></textarea>
+                    <div class="input-wrapper">
+                        <textarea id="messageInput" placeholder="Message Gemini…" rows="1" maxlength="1000"></textarea>
+                    </div>
                     <button id="sendButton" class="send-button" title="Send">
                         <i class="fas fa-paper-plane"></i>
                     </button>

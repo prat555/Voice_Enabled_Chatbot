@@ -24,7 +24,7 @@
 }
 
 .dark {
-    --bg-gradient-from: #0b1220;
+    --bg-gradient-from: #18253f;
     --bg-gradient-to: #172b55;
     --bg-surface: #0b1220;
     --text-primary: #e5e7eb;
@@ -177,16 +177,7 @@ body {
     margin-bottom: 15px;
 }
 
-.stop-button {
-    width: 44px;
-    height: 44px;
-    border: 2px solid var(--danger);
-    border-radius: 12px;
-    background: transparent;
-    color: var(--danger);
-    cursor: pointer;
-}
-.stop-button:hover { background: var(--danger); color: #fff; }
+
 
 .mic-button {
     width: 60px;

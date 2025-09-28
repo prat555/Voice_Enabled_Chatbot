@@ -17,7 +17,6 @@ class VoiceChatbot {
             messageInput: document.getElementById('messageInput'),
             sendButton: document.getElementById('sendButton'),
             micButton: document.getElementById('micButton'),
-            stopSpeaking: document.getElementById('stopSpeaking'),
             clearButton: document.getElementById('clearChat'),
             autoSpeakCheckbox: document.getElementById('autoSpeak'),
             continuousListeningCheckbox: document.getElementById('continuousListening'),
@@ -66,10 +65,7 @@ class VoiceChatbot {
             this.clearChat();
         });
 
-        // Stop speaking
-        this.elements.stopSpeaking.addEventListener('click', () => {
-            this.speechHandler.stopSpeaking();
-        });
+        // Stop speaking via mic toggle: handled by toggleSpeechRecognition and SpeechHandler
 
         // Auto-speak checkbox
         this.elements.autoSpeakCheckbox.addEventListener('change', (e) => {

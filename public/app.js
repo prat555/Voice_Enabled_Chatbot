@@ -19,12 +19,12 @@ class VoiceChatbot {
             micButton: document.getElementById('micButton'),
             clearButton: document.getElementById('clearChat'),
             autoSpeakCheckbox: document.getElementById('autoSpeak'),
-            continuousListeningCheckbox: document.getElementById('continuousListening'),
             loadingOverlay: document.getElementById('loadingOverlay'),
             connectionStatus: document.getElementById('connectionStatus'),
             typingIndicator: document.getElementById('typingIndicator'),
             themeToggle: document.getElementById('themeToggle'),
-            scrollBottom: document.getElementById('scrollBottom'),
+            scrollBottomChat: document.getElementById('scrollBottomChat'),
+            stopSpeaking: document.getElementById('stopSpeaking'),
             suggestions: document.getElementById('suggestions'),
             settingsButton: document.getElementById('settingsButton'),
             settingsModal: document.getElementById('settingsModal'),
@@ -72,11 +72,6 @@ class VoiceChatbot {
             this.speechHandler.setAutoSpeak(e.target.checked);
         });
 
-        // Continuous listening checkbox
-        this.elements.continuousListeningCheckbox.addEventListener('change', (e) => {
-            this.speechHandler.setContinuousMode(e.target.checked);
-        });
-
         // Handle browser back/forward buttons
         window.addEventListener('popstate', () => {
             this.speechHandler.stopListening();
@@ -94,8 +89,11 @@ class VoiceChatbot {
         // Theme toggle
         this.elements.themeToggle.addEventListener('click', () => this.toggleTheme());
 
-        // Scroll-to-bottom
-        this.elements.scrollBottom.addEventListener('click', () => this.scrollToBottom(true));
+        // Chat controls
+        this.elements.scrollBottomChat.addEventListener('click', () => this.scrollToBottom(true));
+        this.elements.stopSpeaking.addEventListener('click', () => {
+            this.speechHandler.stopSpeaking();
+        });
         this.elements.chatMessages.addEventListener('scroll', () => this.updateScrollButton());
 
         // Suggestions
@@ -205,6 +203,234 @@ class VoiceChatbot {
         }
     }
 
+    // Convert Markdown to HTML with comprehensive syntax support
+    markdownToHtml(text) {
+        // First, split into blocks (paragraphs separated by double newlines)
+        const blocks = text.split(/\n\n+/).filter(block => block.trim());
+        let html = '';
+        
+        for (let block of blocks) {
+            block = block.trim();
+            if (!block) continue;
+            
+            // Check for horizontal rules
+            if (/^(---+|\*\*\*+|___+)\s*$/.test(block)) {
+                html += '<hr>';
+                continue;
+            }
+            
+            // Check for headings
+            const headingMatch = block.match(/^(#{1,6})\s+(.+)$/);
+            if (headingMatch) {
+                const level = headingMatch[1].length;
+                const content = this.processInlineMarkdown(headingMatch[2]);
+                html += `<h${level}>${content}</h${level}>`;
+                continue;
+            }
+            
+            // Check for lists (numbered or bulleted) - process entire block as one list
+            const lines = block.split('\n');
+            let listItems = [];
+            let isListBlock = true;
+            
+            for (const line of lines) {
+                // Check for numbered list: 1. item or 1) item
+                const numberedMatch = line.match(/^(\s*)(\d+)[\.\)]\s+(.+)$/);
+                if (numberedMatch) {
+                    const indent = numberedMatch[1];
+                    const content = this.processInlineMarkdown(numberedMatch[3]);
+                    const level = Math.floor(indent.length / 4);
+                    listItems.push({ type: 'ol', level, content });
+                    continue;
+                }
+                
+                // Check for bulleted list: - item, * item, + item
+                const bulletMatch = line.match(/^(\s*)[-\*\+]\s+(.+)$/);
+                if (bulletMatch) {
+                    const indent = bulletMatch[1];
+                    const content = this.processInlineMarkdown(bulletMatch[2]);
+                    const level = Math.floor(indent.length / 4);
+                    listItems.push({ type: 'ul', level, content });
+                    continue;
+                }
+                
+                // If we hit a non-list line, this isn't a pure list block
+                isListBlock = false;
+                break;
+            }
+            
+            // Process list if we found one and it's a pure list block
+            if (isListBlock && listItems.length > 0) {
+                html += this.buildContinuousNestedList(listItems);
+                continue;
+            }
+            
+            // Regular paragraph - process inline markdown
+            const processedContent = this.processInlineMarkdown(block.replace(/\n/g, '<br>'));
+            html += `<p>${processedContent}</p>`;
+        }
+        
+        return html;
+    }
+    
+    // Process inline markdown (bold, italic, code, etc.)
+    processInlineMarkdown(text) {
+        return text
+            // Convert **bold** to <strong>
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Convert *italic* to <em> (avoid conflicts with list markers)
+            .replace(/(?<![*\s])\*([^*\n]+?)\*(?![*\s])/g, '<em>$1</em>')
+            // Convert `code` to <code>
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            // Convert [link text](url) to <a>
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    }
+
+    // Convert HTML to clean plain text for copying
+    htmlToPlainText(html) {
+        // Create a temporary div to parse HTML
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        
+        // Process specific elements
+        const processNode = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return node.textContent;
+            }
+            
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                let result = '';
+                const tagName = node.tagName.toLowerCase();
+                
+                // Handle different HTML elements
+                switch (tagName) {
+                    case 'h1':
+                    case 'h2':
+                    case 'h3':
+                    case 'h4':
+                    case 'h5':
+                    case 'h6':
+                        result += '\n\n' + node.textContent + '\n\n';
+                        break;
+                    case 'p':
+                        result += node.textContent + '\n\n';
+                        break;
+                    case 'br':
+                        result += '\n';
+                        break;
+                    case 'hr':
+                        result += '\n---\n\n';
+                        break;
+                    case 'ul':
+                    case 'ol':
+                        // Process list items
+                        for (let child of node.children) {
+                            if (child.tagName.toLowerCase() === 'li') {
+                                const prefix = tagName === 'ol' ? '• ' : '• ';
+                                result += prefix + child.textContent + '\n';
+                            }
+                        }
+                        result += '\n';
+                        break;
+                    case 'strong':
+                        result += node.textContent; // Remove bold formatting
+                        break;
+                    case 'em':
+                        result += node.textContent; // Remove italic formatting
+                        break;
+                    case 'code':
+                        result += node.textContent; // Remove code formatting
+                        break;
+                    default:
+                        // For other elements, just get text content
+                        result += node.textContent;
+                        break;
+                }
+                
+                return result;
+            }
+            
+            return '';
+        };
+        
+        // Process all child nodes
+        let plainText = '';
+        for (let child of temp.childNodes) {
+            plainText += processNode(child);
+        }
+        
+        // Clean up extra whitespace and newlines
+        return plainText
+            .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with 2
+            .replace(/^\n+/, '') // Remove leading newlines
+            .replace(/\n+$/, '') // Remove trailing newlines
+            .trim();
+    }
+    
+    // Build properly nested lists with continuous numbering
+    buildContinuousNestedList(items) {
+        if (items.length === 0) return '';
+        
+        let html = '';
+        let stack = [];
+        let lastLevel = -1;
+        let lastType = null;
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const { type, level, content } = item;
+            
+            // Handle level changes
+            if (level > lastLevel) {
+                // Going deeper - open new lists
+                for (let j = lastLevel + 1; j <= level; j++) {
+                    const listTag = type === 'ol' ? 'ol' : 'ul';
+                    html += `<${listTag}>`;
+                    stack.push({ tag: `</${listTag}>`, type: type, level: j });
+                }
+            } else if (level < lastLevel) {
+                // Going back - close lists
+                const levelsToClose = lastLevel - level;
+                for (let j = 0; j < levelsToClose; j++) {
+                    if (stack.length > 0) {
+                        html += stack.pop().tag;
+                    }
+                }
+            }
+            
+            // If we're at the same level but different type, we need separate lists
+            // For numbered lists, we want to continue numbering across the document
+            if (level === lastLevel && type !== lastType && stack.length > 0) {
+                // Don't close the previous list if it would break numbering
+                // Instead, close and immediately reopen with the new type
+                const prevStackItem = stack.pop();
+                html += prevStackItem.tag;
+                
+                const listTag = type === 'ol' ? 'ol' : 'ul';
+                html += `<${listTag}>`;
+                stack.push({ tag: `</${listTag}>`, type: type, level: level });
+            }
+            
+            // Add the list item
+            html += `<li>${content}</li>`;
+            lastLevel = level;
+            lastType = type;
+        }
+        
+        // Close all remaining lists
+        while (stack.length > 0) {
+            html += stack.pop().tag;
+        }
+        
+        return html;
+    }
+
+    // Build properly nested lists from list items
+    buildNestedList(items) {
+        // Use the continuous version
+        return this.buildContinuousNestedList(items);
+    }
+
     addMessage(content, role) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message`;
@@ -212,11 +438,13 @@ class VoiceChatbot {
         const now = new Date();
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
-        const safe = this.escapeHtml(content);
+        // Use markdown rendering for assistant messages, escape HTML for user messages
+        const processedContent = role === 'assistant' ? this.markdownToHtml(content) : this.escapeHtml(content);
+        
         messageDiv.innerHTML = `
             <div class="message-content">
                 <i class="fas fa-${role === 'user' ? 'user' : 'robot'}"></i>
-                <div class="text">${safe}${role === 'assistant' ? '<div class="copy-actions"><button class="copy-btn" title="Copy"><i class="fas fa-copy"></i></button></div>' : ''}</div>
+                <div class="text">${processedContent}${role === 'assistant' ? '<div class="copy-actions"><button class="copy-btn" title="Copy"><i class="fas fa-copy"></i></button></div>' : ''}</div>
             </div>
             <div class="message-time">${timeString}</div>
         `;
@@ -229,7 +457,9 @@ class VoiceChatbot {
             const copyBtn = messageDiv.querySelector('.copy-btn');
             copyBtn?.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                await navigator.clipboard.writeText(this.stripHtml(safe));
+                // Convert HTML back to clean plain text for copying
+                const cleanText = this.htmlToPlainText(processedContent);
+                await navigator.clipboard.writeText(cleanText);
                 this.showNotification('Copied to clipboard', 'success');
             });
         }
@@ -354,7 +584,7 @@ class VoiceChatbot {
 
     updateScrollButton() {
         const atBottom = this.elements.chatMessages.scrollHeight - this.elements.chatMessages.scrollTop - this.elements.chatMessages.clientHeight < 10;
-        this.elements.scrollBottom.classList.toggle('show', !atBottom);
+        this.elements.scrollBottomChat.classList.toggle('show', !atBottom);
     }
 
     escapeHtml(text) {
@@ -504,7 +734,24 @@ VoiceChatbot.prototype.populateVoices = function() {
         select.appendChild(opt);
     });
     const saved = JSON.parse(localStorage.getItem('speechConfig') || '{}');
-    if (saved.voiceURI) select.value = saved.voiceURI;
+    
+    // Set default voice selection
+    if (saved.voiceURI) {
+        select.value = saved.voiceURI;
+    } else {
+        // Default to Google US English if available
+        const defaultVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes('google') && 
+            voice.lang.includes('en-US')
+        ) || voices.find(voice => voice.name.includes('Google'))
+          || voices.find(voice => voice.name.includes('Microsoft'))
+          || voices.find(voice => voice.lang.includes('en'));
+        
+        if (defaultVoice) {
+            select.value = defaultVoice.voiceURI;
+        }
+    }
+    
     this.elements.rateRange.value = saved.rate ?? 0.9;
     this.elements.pitchRange.value = saved.pitch ?? 1.0;
     this.elements.volumeRange.value = saved.volume ?? 0.8;

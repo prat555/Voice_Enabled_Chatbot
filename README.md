@@ -1,28 +1,14 @@
-# Voice-Enabled Chatbot 🤖🎤
+# Voice-Enabled Chatbot 🤖
 
 A modern, voice-enabled chatbot powered by Google Gemini with speech recognition and text-to-speech (TTS). Use your voice or type in a sleek, responsive UI with dark mode, quick suggestions, and customizable voice settings.
 
-## Features ✨
-
-- Voice input with the Web Speech API (SpeechRecognition)
-- Voice output via TTS with adjustable voice/rate/pitch/volume
-- Theme toggle (light/dark) with persistence
-- Typing indicator while the model thinks
-- Quick suggestion chips to jumpstart prompts
-- Copy-to-clipboard on assistant messages (hover top-right)
-- Scroll-to-bottom floating button for long chats
-- Continuous listening and auto-speak controls
-- Connection and speech support indicators
-- Input validation and error handling throughout
-
-## Prerequisites 📋
+## Prerequisites 
 
 - Node.js 16+ (Node 18+ recommended)
-- npm (bundled with Node.js)
 - A Google Gemini API key (create one in Google AI Studio)
 - A modern browser (best: Chrome/Edge; partial: Safari/Firefox)
 
-## Quick Start 🚀
+## Quick Start 
 
 1) Install dependencies
 ```bash
@@ -46,7 +32,7 @@ npm start
 - Visit http://localhost:3000
 - Allow microphone access when prompted
 
-## Model Configuration 🤖
+## Model Configuration 
 
 By default, the app uses:
 
@@ -68,10 +54,9 @@ Tip: If you see a 404 for a model, list available models using the REST API:
 curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY"
 ```
 
-## API Endpoints 🔌
+## API Endpoints 
 
 ```
-POST /api/chat           # { message: string }
 POST /api/clear-history  # clears in-memory history
 GET  /api/history        # returns in-memory history
 GET  /api/health         # health/status info
@@ -95,7 +80,7 @@ voice_enabled_chatbot/
     └── speech-handler.js    # Speech recognition & synthesis
 ```
 
-## Configuration ⚙️
+## Configuration 
 
 Environment variables (in `.env`):
 

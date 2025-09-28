@@ -47,6 +47,14 @@
                         <i class="fas fa-microphone"></i>
                     </button>
                     <div class="voice-status" id="voiceStatus">Ready to listen</div>
+                    <div class="voice-controls-right">
+                        <button id="stopSpeaking" class="stop-speaking-btn" title="Stop speaking" aria-label="Stop speaking">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                        <button id="scrollBottomChat" class="scroll-bottom-chat" title="Scroll to latest" aria-label="Scroll to bottom">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="text-input-container">
@@ -66,10 +74,6 @@
                         <label>
                             <input type="checkbox" id="autoSpeak" checked>
                             <i class="fas fa-volume-up"></i> Auto-speak responses
-                        </label>
-                        <label>
-                            <input type="checkbox" id="continuousListening">
-                            <i class="fas fa-microphone-alt"></i> Continuous listening
                         </label>
                     </div>
                     <button id="clearChat" class="clear-button" title="Clear chat history">
@@ -95,10 +99,6 @@
             </div>
         </div>
     </div>
-
-    <button id="scrollBottom" class="scroll-bottom" title="Scroll to latest" aria-label="Scroll to bottom">
-        <i class="fas fa-arrow-down"></i>
-    </button>
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="settingsTitle">

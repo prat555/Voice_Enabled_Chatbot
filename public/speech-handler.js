@@ -5,7 +5,6 @@ class SpeechHandler {
         this.synthesis = window.speechSynthesis;
         this.isListening = false;
         this.isProcessing = false;
-        this.continuousMode = false;
         this.autoSpeak = true;
         this.voiceConfig = {
             voiceURI: null,
@@ -112,16 +111,7 @@ class SpeechHandler {
         this.recognition.onend = () => {
             this.isListening = false;
             this.updateMicButtonState('ready');
-            
-            if (this.continuousMode && !this.isProcessing) {
-                // Restart listening in continuous mode
-                setTimeout(() => {
-                    this.startListening();
-                }, 1000);
-            } else {
-                this.updateVoiceStatus('Ready to listen');
-            }
-            
+            this.updateVoiceStatus('Ready to listen');
             console.log('Speech recognition ended');
         };
     }
@@ -182,10 +172,15 @@ class SpeechHandler {
             selected = voices.find(v => v.voiceURI === this.voiceConfig.voiceURI) || null;
         }
         if (!selected) {
-            selected = voices.find(voice => voice.name.includes('Google'))
-                || voices.find(voice => voice.name.includes('Microsoft'))
-                || voices.find(voice => voice.lang.includes('en'))
-                || null;
+            // Prioritize Google US English as default
+            selected = voices.find(voice => 
+                voice.name.toLowerCase().includes('google') && 
+                voice.lang.includes('en-US')
+            )
+            || voices.find(voice => voice.name.includes('Google'))
+            || voices.find(voice => voice.name.includes('Microsoft'))
+            || voices.find(voice => voice.lang.includes('en'))
+            || null;
         }
         if (selected) utterance.voice = selected;
 
@@ -197,13 +192,6 @@ class SpeechHandler {
         utterance.onend = () => {
             console.log('Finished speaking');
             this.updateVoiceStatus('Ready to listen');
-            
-            // Resume listening in continuous mode
-            if (this.continuousMode) {
-                setTimeout(() => {
-                    this.startListening();
-                }, 500);
-            }
         };
 
         utterance.onerror = (event) => {
@@ -218,22 +206,6 @@ class SpeechHandler {
     stopSpeaking() {
         if (this.synthesis) {
             this.synthesis.cancel();
-        }
-    }
-
-    setContinuousMode(enabled) {
-        this.continuousMode = enabled;
-        console.log('Continuous mode:', enabled);
-        
-        if (enabled) {
-            this.updateVoiceStatus('Continuous listening enabled');
-            // Start listening if not already
-            if (!this.isListening) {
-                setTimeout(() => this.startListening(), 1000);
-            }
-        } else {
-            this.updateVoiceStatus('Continuous listening disabled');
-            this.stopListening();
         }
     }
 

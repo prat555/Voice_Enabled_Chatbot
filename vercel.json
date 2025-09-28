@@ -4,10 +4,10 @@
     { "src": "api/server.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/server.js" },
-    { "src": "/(.*)", "dest": "/public/$1" },
+    { "src": "^/api/(.*)$", "dest": "/api/server.js" },
+    { "src": "^/$", "dest": "/public/index.html" },
     { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/public/index.html" }
+    { "src": "/(.*)", "dest": "/public/index.html" }
   ],
   "env": {
     "NODE_ENV": "production"

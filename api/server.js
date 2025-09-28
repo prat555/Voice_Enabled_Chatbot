@@ -1,6 +1,10 @@
 const app = require('../src/app');
 
-// Vercel's Node runtime uses the exported default handler from a module.
-// Express app is already configured; just export the app as the handler.
-module.exports = app;
-module.exports.default = app;
+// Export a handler function that delegates to the Express app.
+// This is the most compatible shape for @vercel/node.
+function handler(req, res) {
+	return app(req, res);
+}
+
+module.exports = handler;
+module.exports.default = handler;

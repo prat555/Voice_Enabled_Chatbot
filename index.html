@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Enabled Chatbot</title>
+    <link rel="stylesheet" href="public/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="brand">
+                <h1><i class="fas fa-robot"></i> Voice-Enabled Chatbot</h1>
+                <p>Powered by Google Gemini</p>
+            </div>
+            <div class="header-actions">
+                <button id="themeToggle" class="icon-button" title="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="settingsButton" class="icon-button" title="Settings">
+                    <i class="fas fa-gear"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message assistant-message">
+                    <div class="message-content">
+                        <i class="fas fa-robot"></i>
+                        <div class="text">
+                            Hello! I'm your voice-enabled AI assistant. You can either type your message or click the microphone button to speak to me. How can I help you today?
+                        </div>
+                    </div>
+                    <div class="message-time"></div>
+                </div>
+            </div>
+
+            <div id="typingIndicator" class="typing-indicator" aria-hidden="true">
+                <span></span><span></span><span></span>
+            </div>
+
+            <div class="input-container">
+                <div class="voice-controls">
+                    <button id="micButton" class="mic-button" title="Click to start/stop listening">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div class="voice-status" id="voiceStatus">Ready to listen</div>
+                </div>
+                
+                <div class="text-input-container">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Type your message here or click the microphone to speak..."
+                        rows="3"
+                        maxlength="1000"
+                    ></textarea>
+                    <button id="sendButton" class="send-button" title="Send message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+
+                <div class="controls">
+                    <div class="voice-settings">
+                        <label>
+                            <input type="checkbox" id="autoSpeak" checked>
+                            <i class="fas fa-volume-up"></i> Auto-speak responses
+                        </label>
+                        <label>
+                            <input type="checkbox" id="continuousListening">
+                            <i class="fas fa-microphone-alt"></i> Continuous listening
+                        </label>
+                    </div>
+                    <button id="clearChat" class="clear-button" title="Clear chat history">
+                        <i class="fas fa-trash"></i> Clear Chat
+                    </button>
+                </div>
+
+                <div class="suggestions" id="suggestions">
+                    <button class="chip" data-text="Summarize this article."><i class="fas fa-bolt"></i> Summarize this</button>
+                    <button class="chip" data-text="Explain this like I'm five."><i class="fas fa-child"></i> Explain like I'm five</button>
+                    <button class="chip" data-text="List 3 actionable next steps."><i class="fas fa-list-check"></i> Next steps</button>
+                    <button class="chip" data-text="What are pros and cons?"><i class="fas fa-scale-balanced"></i> Pros & Cons</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="connection-status" id="connectionStatus">
+                <i class="fas fa-circle"></i> Connected
+            </div>
+            <div class="speech-support" id="speechSupport">
+                <i class="fas fa-microphone"></i> Speech: Checking...
+            </div>
+        </div>
+    </div>
+
+    <button id="scrollBottom" class="scroll-bottom" title="Scroll to latest" aria-label="Scroll to bottom">
+        <i class="fas fa-arrow-down"></i>
+    </button>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="settingsTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="settingsTitle"><i class="fas fa-sliders-h"></i> Settings</h2>
+                <button id="closeSettings" class="icon-button" title="Close"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label for="voiceSelect">Voice</label>
+                    <select id="voiceSelect"></select>
+                </div>
+                <div class="grid-2">
+                    <div class="field">
+                        <label for="rateRange">Rate <span id="rateValue">0.9</span></label>
+                        <input id="rateRange" type="range" min="0.5" max="1.5" step="0.05" value="0.9">
+                    </div>
+                    <div class="field">
+                        <label for="pitchRange">Pitch <span id="pitchValue">1.0</span></label>
+                        <input id="pitchRange" type="range" min="0.5" max="2" step="0.1" value="1.0">
+                    </div>
+                    <div class="field">
+                        <label for="volumeRange">Volume <span id="volumeValue">0.8</span></label>
+                        <input id="volumeRange" type="range" min="0" max="1" step="0.05" value="0.8">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveSettings" class="primary-button"><i class="fas fa-check"></i> Save</button>
+                <button id="resetSettings" class="secondary-button"><i class="fas fa-rotate-left"></i> Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Processing your message...</div>
+    </div>
+
+    <script src="public/speech-handler.js"></script>
+    <script src="public/app.js"></script>
+</body>
+</html>

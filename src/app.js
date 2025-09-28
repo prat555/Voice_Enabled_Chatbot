@@ -90,9 +90,6 @@ app.get('/api/health', (req, res) => {
     res.json({ success: true, status: 'healthy', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
-// Wildcard to index.html (local dev); on Vercel we use routes to serve static index.html
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
+// Note: No catch-all route here - Vercel handles static files and SPA routing via vercel.json
 
 module.exports = app;

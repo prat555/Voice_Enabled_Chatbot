@@ -305,6 +305,43 @@ body {
     line-height: 1.2;
 }
 
+.text table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 0.95em;
+}
+
+.text table th,
+.text table td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.text table th {
+    background: var(--muted);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.text table tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.dark .text table tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.text table tr:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .text table tr:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
 .message-time {
     font-size: 0.75rem;
     color: var(--text-secondary);

@@ -9,6 +9,7 @@ class VoiceChatbot {
         this.setupEventListeners();
         this.setupSpeechHandler();
         this.checkServerConnection();
+        this.loadChatHistory(); // Load previous conversation history
     }
 
     initializeElements() {
@@ -83,7 +84,13 @@ class VoiceChatbot {
             if (document.hidden) {
                 this.speechHandler.stopListening();
                 this.speechHandler.stopSpeaking();
+                this.saveScrollPosition(); // Save position when page becomes hidden
             }
+        });
+
+        // Save scroll position before page unload
+        window.addEventListener('beforeunload', () => {
+            this.saveScrollPosition();
         });
 
         // Theme toggle
@@ -94,7 +101,10 @@ class VoiceChatbot {
         this.elements.stopSpeaking.addEventListener('click', () => {
             this.speechHandler.stopSpeaking();
         });
-        this.elements.chatMessages.addEventListener('scroll', () => this.updateScrollButton());
+        this.elements.chatMessages.addEventListener('scroll', () => {
+            this.updateScrollButton();
+            this.saveScrollPosition(); // Save position when user scrolls
+        });
 
         // Suggestions
         this.elements.suggestions?.addEventListener('click', (e) => {
@@ -164,9 +174,12 @@ class VoiceChatbot {
         this.setLoadingState(true);
         this.speechHandler.stopListening();
 
-    // Add user message to chat
-    this.addMessage(message, 'user');
-    this.showTyping(true);
+        // Add user message to chat
+        this.addMessage(message, 'user');
+        this.showTyping(true);
+
+        // Save message to local storage for persistence
+        this.saveMessageToHistory({ role: 'user', content: message, timestamp: new Date().toISOString() });
 
         try {
             // Send message to API
@@ -187,6 +200,9 @@ class VoiceChatbot {
             if (data.success) {
                 // Add assistant response to chat
                 this.addMessage(data.response, 'assistant');
+                
+                // Save response to local storage for persistence
+                this.saveMessageToHistory({ role: 'assistant', content: data.response, timestamp: data.timestamp });
                 
                 // Speak the response if auto-speak is enabled
                 this.speechHandler.speakText(data.response);
@@ -227,6 +243,15 @@ class VoiceChatbot {
                 const content = this.processInlineMarkdown(headingMatch[2]);
                 html += `<h${level}>${content}</h${level}>`;
                 continue;
+            }
+
+            // Check for tables (look for pipe characters)
+            if (block.includes('|')) {
+                const tableHtml = this.processTable(block);
+                if (tableHtml) {
+                    html += tableHtml;
+                    continue;
+                }
             }
             
             // Process each line individually to handle mixed content
@@ -321,6 +346,71 @@ class VoiceChatbot {
         // 5) Links
         out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
         return out;
+    }
+
+    // Process markdown tables
+    processTable(block) {
+        const lines = block.trim().split('\n');
+        if (lines.length < 2) return null;
+
+        // Check if this looks like a table (has pipes and header separator)
+        const hasHeaderSeparator = lines.length >= 2 && 
+            lines[1].match(/^\s*\|?[\s\-\|\:]+\|?\s*$/) &&
+            lines[1].includes('-');
+        
+        if (!hasHeaderSeparator) return null;
+
+        let html = '<table>';
+        let inHeader = true;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // Skip the header separator line
+            if (i === 1 && line.match(/^\s*\|?[\s\-\|\:]+\|?\s*$/)) {
+                if (inHeader) {
+                    html += '</thead><tbody>';
+                    inHeader = false;
+                }
+                continue;
+            }
+
+            // Parse table row
+            if (line.includes('|')) {
+                let cells = line.split('|');
+                
+                // Remove empty cells at start/end if they exist (from leading/trailing pipes)
+                if (cells[0].trim() === '') cells.shift();
+                if (cells[cells.length - 1].trim() === '') cells.pop();
+
+                if (cells.length === 0) continue;
+
+                // Start appropriate section
+                if (inHeader && i === 0) {
+                    html += '<thead>';
+                }
+
+                const tag = inHeader ? 'th' : 'td';
+                html += '<tr>';
+                
+                for (const cell of cells) {
+                    const cellContent = this.processInlineMarkdown(cell.trim());
+                    html += `<${tag}>${cellContent}</${tag}>`;
+                }
+                
+                html += '</tr>';
+            }
+        }
+
+        // Close any open sections
+        if (inHeader) {
+            html += '</thead>';
+        } else {
+            html += '</tbody>';
+        }
+        
+        html += '</table>';
+        return html;
     }
 
     // Convert HTML to clean markdown text for copying
@@ -833,7 +923,7 @@ class VoiceChatbot {
         }
     }
 
-    addMessage(content, role) {
+    addMessage(content, role, saveToHistory = true) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message`;
         
@@ -928,6 +1018,11 @@ class VoiceChatbot {
                         <div class="message-time"></div>
                     </div>
                 `;
+                
+                // Clear local storage history
+                localStorage.removeItem('chatHistory');
+                localStorage.removeItem('chatScrollPosition'); // Also clear saved scroll position
+                
                 this.showNotification('Chat history cleared', 'success');
             } else {
                 throw new Error('Failed to clear chat history');
@@ -1078,6 +1173,133 @@ class VoiceChatbot {
                 }
             }, 300);
         }, 4000);
+    }
+
+    // Load chat history from localStorage
+    loadChatHistory() {
+        try {
+            const savedHistory = localStorage.getItem('chatHistory');
+            if (savedHistory) {
+                const history = JSON.parse(savedHistory);
+                
+                // Clear the default welcome message
+                this.elements.chatMessages.innerHTML = '';
+                
+                // Restore messages to the UI
+                history.forEach(msg => {
+                    this.addMessage(msg.content, msg.role, false); // Don't save to storage again
+                });
+                
+                // If no messages, add welcome message
+                if (history.length === 0) {
+                    this.addWelcomeMessage();
+                }
+                
+                // Restore scroll position after messages are loaded
+                this.restoreScrollPosition();
+            } else {
+                this.addWelcomeMessage();
+            }
+        } catch (error) {
+            console.error('Error loading chat history:', error);
+            this.addWelcomeMessage();
+        }
+    }
+
+    // Save message to localStorage
+    saveMessageToHistory(messageObj) {
+        try {
+            let history = [];
+            const saved = localStorage.getItem('chatHistory');
+            if (saved) {
+                history = JSON.parse(saved);
+            }
+            
+            history.push(messageObj);
+            
+            // Keep only the last 50 messages to prevent storage overflow
+            if (history.length > 50) {
+                history = history.slice(-50);
+            }
+            
+            localStorage.setItem('chatHistory', JSON.stringify(history));
+        } catch (error) {
+            console.error('Error saving message to history:', error);
+        }
+    }
+
+    // Add welcome message
+    addWelcomeMessage() {
+        this.elements.chatMessages.innerHTML = `
+            <div class="message assistant-message">
+                <div class="message-content">
+                    <i class="fas fa-robot"></i>
+                    <div class="text">
+                        Hello! I'm your AI assistant. I can now remember our conversation, so feel free to refer to previous messages. How can I help you today?
+                    </div>
+                </div>
+                <div class="message-time"></div>
+            </div>
+        `;
+    }
+
+    // Save scroll position to localStorage
+    saveScrollPosition() {
+        try {
+            const scrollTop = this.elements.chatMessages.scrollTop;
+            const scrollHeight = this.elements.chatMessages.scrollHeight;
+            const clientHeight = this.elements.chatMessages.clientHeight;
+            
+            localStorage.setItem('chatScrollPosition', JSON.stringify({
+                scrollTop,
+                scrollHeight,
+                clientHeight,
+                timestamp: Date.now()
+            }));
+        } catch (error) {
+            console.error('Error saving scroll position:', error);
+        }
+    }
+
+    // Restore scroll position from localStorage
+    restoreScrollPosition() {
+        try {
+            const savedPosition = localStorage.getItem('chatScrollPosition');
+            if (!savedPosition) {
+                this.scrollToBottom();
+                return;
+            }
+
+            const position = JSON.parse(savedPosition);
+            
+            // Check if the saved position is recent (within last hour)
+            const hourAgo = Date.now() - (60 * 60 * 1000);
+            if (position.timestamp < hourAgo) {
+                this.scrollToBottom();
+                return;
+            }
+
+            // Use setTimeout to ensure DOM is fully rendered
+            setTimeout(() => {
+                const currentScrollHeight = this.elements.chatMessages.scrollHeight;
+                const currentClientHeight = this.elements.chatMessages.clientHeight;
+                
+                // If content dimensions haven't changed much, restore exact position
+                if (Math.abs(currentScrollHeight - position.scrollHeight) < 50) {
+                    this.elements.chatMessages.scrollTop = position.scrollTop;
+                } else {
+                    // If content has changed significantly, calculate proportional position
+                    const scrollRatio = position.scrollTop / (position.scrollHeight - position.clientHeight);
+                    const newScrollTop = scrollRatio * (currentScrollHeight - currentClientHeight);
+                    this.elements.chatMessages.scrollTop = Math.max(0, newScrollTop);
+                }
+                
+                this.updateScrollButton();
+            }, 100);
+        } catch (error) {
+            console.error('Error restoring scroll position:', error);
+            this.scrollToBottom();
+        }
     }
 }
 

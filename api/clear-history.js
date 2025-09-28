@@ -1,24 +1,49 @@
-// Simple in-memory chat history for this demo
-// Note: This won't persist across serverless function calls
-// For production, use a database like Redis or PostgreSQL
-
-let chatHistory = [];
-
-export default function handler(req, res) {
+// Clear chat history endpoint with actual conversation clearing
+export default async function handler(req, res) {
   if (req.method === 'POST') {
-    // Clear history
-    chatHistory = [];
-    res.json({
-      success: true,
-      message: 'Chat history cleared'
-    });
+    try {
+      // Import the chatbot to clear history
+      const { default: GeminiChatbot } = await import('../src/gemini-chatbot.js');
+      const chatbot = new GeminiChatbot();
+      
+      // Clear the conversation history
+      const result = chatbot.clearHistory();
+      
+      return res.json({
+        success: true,
+        message: 'Chat history cleared',
+        count: result.count
+      });
+    } catch (error) {
+      console.error('Error clearing chat history:', error);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to clear chat history' 
+      });
+    }
   } else if (req.method === 'GET') {
-    // Return empty history to enforce stateless behavior
-    res.json({
-      success: true,
-      history: []
-    });
+    try {
+      // Import the chatbot to get current history
+      const { default: GeminiChatbot } = await import('../src/gemini-chatbot.js');
+      const chatbot = new GeminiChatbot();
+      
+      const historyResult = chatbot.getChatHistory();
+      
+      return res.json({
+        success: true,
+        history: historyResult.history,
+        count: historyResult.count
+      });
+    } catch (error) {
+      console.error('Error getting chat history:', error);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to retrieve chat history',
+        history: [],
+        count: 0
+      });
+    }
   } else {
-    res.status(405).json({ success: false, error: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 }

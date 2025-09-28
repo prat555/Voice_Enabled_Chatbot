@@ -4,12 +4,14 @@ class VoiceChatbot {
         this.speechHandler = new SpeechHandler();
         this.apiBaseUrl = '/api';
         this.isLoading = false;
+        this.activeChatId = null;
+        this.chats = [];
         
         this.initializeElements();
         this.setupEventListeners();
         this.setupSpeechHandler();
         this.checkServerConnection();
-        this.loadChatHistory(); // Load previous conversation history
+        this.bootstrapChats(); // Initialize chats and load active history
     }
 
     initializeElements() {
@@ -18,7 +20,11 @@ class VoiceChatbot {
             messageInput: document.getElementById('messageInput'),
             sendButton: document.getElementById('sendButton'),
             micButton: document.getElementById('micButton'),
-            clearButton: document.getElementById('clearChat'),
+            clearButton: document.getElementById('clearChat'), // no longer present, kept for backward compat (unused)
+            newChatBtn: document.getElementById('newChatBtn'),
+            chatList: document.getElementById('chatList'),
+            deleteAllBtn: document.getElementById('deleteAllChats'),
+            chatTitle: document.getElementById('chatTitle'),
             autoSpeakCheckbox: document.getElementById('autoSpeak'),
             loadingOverlay: document.getElementById('loadingOverlay'),
             connectionStatus: document.getElementById('connectionStatus'),
@@ -61,9 +67,39 @@ class VoiceChatbot {
             this.toggleSpeechRecognition();
         });
 
-        // Clear chat button
-        this.elements.clearButton.addEventListener('click', () => {
-            this.clearChat();
+        // Clear chat button (deprecated in new UI) - keep handler if exists
+        this.elements.clearButton?.addEventListener('click', () => { this.clearChat(); });
+
+        // New chat
+        this.elements.newChatBtn?.addEventListener('click', () => {
+            this.createChat();
+        });
+
+        // Delete all chats
+        this.elements.deleteAllBtn?.addEventListener('click', () => {
+            this.deleteAllChats();
+        });
+
+        // Chat list actions (select/rename/delete)
+        this.elements.chatList?.addEventListener('click', (e) => {
+            const item = e.target.closest('.chatlist-item');
+            if (!item) return;
+            const id = item.getAttribute('data-id');
+            if (!id) return;
+
+            const actionBtn = e.target.closest('[data-action]');
+            const action = actionBtn?.getAttribute('data-action');
+            if (action === 'rename') {
+                const current = this.chats.find(c => c.id === id);
+                const newTitle = prompt('Rename chat', current?.title || '');
+                if (newTitle && newTitle.trim()) this.renameChat(id, newTitle.trim());
+                return;
+            } else if (action === 'delete') {
+                this.deleteChat(id);
+                return;
+            }
+            // Default: select
+            this.selectChat(id);
         });
 
         // Stop speaking via mic toggle: handled by toggleSpeechRecognition and SpeechHandler
@@ -116,6 +152,8 @@ class VoiceChatbot {
                 this.sendMessage();
             }
         });
+
+        // Quick-actions removed in new layout
 
         // Settings modal
         this.elements.settingsButton.addEventListener('click', () => this.openSettings());
@@ -178,8 +216,8 @@ class VoiceChatbot {
         this.addMessage(message, 'user');
         this.showTyping(true);
 
-        // Save message to local storage for persistence
-        this.saveMessageToHistory({ role: 'user', content: message, timestamp: new Date().toISOString() });
+    // Save message to local storage for persistence
+    this.saveMessageToHistory({ role: 'user', content: message, timestamp: new Date().toISOString() });
 
         try {
             // Send message to API
@@ -188,7 +226,7 @@ class VoiceChatbot {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ message, chatId: this.activeChatId })
             });
 
             if (!response.ok) {
@@ -206,6 +244,9 @@ class VoiceChatbot {
                 
                 // Speak the response if auto-speak is enabled
                 this.speechHandler.speakText(data.response);
+
+                // If chat title is default, set from first user message
+                this.maybeAutoTitleFromFirstMessage();
             } else {
                 throw new Error(data.error || 'Failed to get response from chatbot');
             }
@@ -1002,7 +1043,8 @@ class VoiceChatbot {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                body: JSON.stringify({ chatId: this.activeChatId })
             });
 
             if (response.ok) {
@@ -1019,9 +1061,9 @@ class VoiceChatbot {
                     </div>
                 `;
                 
-                // Clear local storage history
-                localStorage.removeItem('chatHistory');
-                localStorage.removeItem('chatScrollPosition'); // Also clear saved scroll position
+                // Clear local storage history for this chat
+                localStorage.removeItem(this.keyHistory(this.activeChatId));
+                localStorage.removeItem(this.keyScroll(this.activeChatId));
                 
                 this.showNotification('Chat history cleared', 'success');
             } else {
@@ -1087,10 +1129,10 @@ class VoiceChatbot {
     updateConnectionStatus(connected) {
         const statusElement = this.elements.connectionStatus;
         if (connected) {
-            statusElement.innerHTML = '<i class="fas fa-circle"></i> Connected';
+            statusElement.innerHTML = '<i class="fas fa-circle"></i> Gemini Connected';
             statusElement.className = 'connection-status connected';
         } else {
-            statusElement.innerHTML = '<i class="fas fa-circle"></i> Disconnected';
+            statusElement.innerHTML = '<i class="fas fa-circle"></i> Gemini Disconnected';
             statusElement.className = 'connection-status disconnected';
         }
     }
@@ -1175,33 +1217,166 @@ class VoiceChatbot {
         }, 4000);
     }
 
-    // Load chat history from localStorage
-    loadChatHistory() {
+    // Chat bootstrap: load chats and render
+    bootstrapChats() {
+        const saved = JSON.parse(localStorage.getItem('chats') || 'null');
+        if (!saved || !Array.isArray(saved.items) || saved.items.length === 0) {
+            // Create initial chat
+            const id = this.genId();
+            this.chats = [{ id, title: 'New Chat', createdAt: Date.now(), updatedAt: Date.now() }];
+            this.activeChatId = id;
+            this.persistChats();
+        } else {
+            this.chats = saved.items;
+            this.activeChatId = saved.activeId || this.chats[0].id;
+        }
+        this.renderChatList();
+        this.loadActiveChatHistory();
+    }
+
+    // Helpers for storage keys
+    keyHistory(id) { return `chatHistory:${id}`; }
+    keyScroll(id) { return `chatScrollPosition:${id}`; }
+
+    // Create/select/rename/delete chats
+    genId() { return Math.random().toString(36).slice(2, 10); }
+    persistChats() {
+        localStorage.setItem('chats', JSON.stringify({ activeId: this.activeChatId, items: this.chats }));
+    }
+    renderChatList() {
+        if (!this.elements.chatList) return;
+        this.elements.chatList.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        this.chats.forEach(c => {
+            const div = document.createElement('div');
+            div.className = `chatlist-item${c.id === this.activeChatId ? ' active' : ''}`;
+            div.setAttribute('data-id', c.id);
+            const preview = this.getChatPreview(c.id);
+            div.innerHTML = `
+                <div class="info">
+                  <div class="title">${this.escapeHtml(c.title || 'Untitled')}</div>
+                  <div class="meta">${this.escapeHtml(preview)}</div>
+                </div>
+                <div class="actions">
+                  <button class="icon-button" title="Rename" data-action="rename"><i class="fa-regular fa-pen-to-square"></i></button>
+                  <button class="icon-button" title="Delete" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
+                </div>
+            `;
+            frag.appendChild(div);
+        });
+        this.elements.chatList.appendChild(frag);
+                this.updateChatTitle();
+    }
+    getChatPreview(id) {
         try {
-            const savedHistory = localStorage.getItem('chatHistory');
-            if (savedHistory) {
-                const history = JSON.parse(savedHistory);
-                
-                // Clear the default welcome message
-                this.elements.chatMessages.innerHTML = '';
-                
-                // Restore messages to the UI
-                history.forEach(msg => {
-                    this.addMessage(msg.content, msg.role, false); // Don't save to storage again
-                });
-                
-                // If no messages, add welcome message
-                if (history.length === 0) {
-                    this.addWelcomeMessage();
-                }
-                
-                // Restore scroll position after messages are loaded
-                this.restoreScrollPosition();
+            const saved = localStorage.getItem(this.keyHistory(id));
+            if (!saved) return 'No messages yet';
+            const hist = JSON.parse(saved);
+            const last = hist[hist.length - 1];
+            if (!last) return 'No messages yet';
+            const text = (last.role === 'assistant') ? this.htmlToPlainReadable(this.markdownToHtml(last.content)) : (last.content || '');
+            return (text || '').slice(0, 40) + (text && text.length > 40 ? '…' : '');
+        } catch { return 'No messages yet'; }
+    }
+    createChat() {
+        const id = this.genId();
+        const chat = { id, title: 'New Chat', createdAt: Date.now(), updatedAt: Date.now() };
+        this.chats.unshift(chat);
+        this.activeChatId = id;
+        this.persistChats();
+        this.renderChatList();
+        // Reset UI
+        this.elements.chatMessages.innerHTML = '';
+        this.addWelcomeMessage();
+        this.scrollToBottom(true);
+        this.updateChatTitle();
+    }
+    selectChat(id) {
+        if (!id || id === this.activeChatId) return;
+        if (!this.chats.find(c => c.id === id)) return;
+        this.activeChatId = id;
+        this.persistChats();
+        this.renderChatList();
+        this.loadActiveChatHistory();
+        this.updateChatTitle();
+    }
+    renameChat(id, newTitle) {
+        const c = this.chats.find(x => x.id === id);
+        if (!c) return;
+        c.title = newTitle;
+        c.updatedAt = Date.now();
+        this.persistChats();
+        this.renderChatList();
+        if (id === this.activeChatId) this.updateChatTitle();
+    }
+    deleteChat(id) {
+        const idx = this.chats.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        if (!confirm('Delete this chat? This will remove its local history.')) return;
+        // Remove local histories
+        localStorage.removeItem(this.keyHistory(id));
+        localStorage.removeItem(this.keyScroll(id));
+        this.chats.splice(idx, 1);
+        if (this.activeChatId === id) {
+            // Switch to first or create new
+            if (this.chats.length === 0) {
+                this.createChat();
             } else {
-                this.addWelcomeMessage();
+                this.activeChatId = this.chats[0].id;
+                this.persistChats();
+                this.renderChatList();
+                this.loadActiveChatHistory();
+                this.updateChatTitle();
             }
-        } catch (error) {
-            console.error('Error loading chat history:', error);
+        } else {
+            this.persistChats();
+            this.renderChatList();
+        }
+    }
+
+    deleteAllChats() {
+        if (!confirm('Delete ALL chats locally? This cannot be undone.')) return;
+        // Clear local chat histories
+        try {
+            const saved = JSON.parse(localStorage.getItem('chats') || 'null');
+            if (saved && Array.isArray(saved.items)) {
+                saved.items.forEach(c => {
+                    localStorage.removeItem(this.keyHistory(c.id));
+                    localStorage.removeItem(this.keyScroll(c.id));
+                });
+            }
+        } catch {}
+        // Reset list
+        this.chats = [];
+        this.persistChats();
+        // Also ask server to clear default chat history for safety
+        fetch(`${this.apiBaseUrl}/clear-history`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ all: true }) }).catch(() => {});
+        // Create a new fresh chat
+        this.createChat();
+    }
+
+    updateChatTitle() {
+        const c = this.chats.find(x => x.id === this.activeChatId);
+        if (this.elements.chatTitle) {
+            this.elements.chatTitle.textContent = c?.title || 'Chat';
+        }
+    }
+
+    // Load chat history for active chat
+    loadActiveChatHistory() {
+        try {
+            const savedHistory = localStorage.getItem(this.keyHistory(this.activeChatId));
+            const history = savedHistory ? JSON.parse(savedHistory) : [];
+            // Clear UI
+            this.elements.chatMessages.innerHTML = '';
+            if (history.length === 0) {
+                this.addWelcomeMessage();
+            } else {
+                history.forEach(msg => this.addMessage(msg.content, msg.role, false));
+            }
+            this.restoreScrollPosition();
+        } catch (e) {
+            console.error('Error loading chat history:', e);
             this.addWelcomeMessage();
         }
     }
@@ -1210,7 +1385,7 @@ class VoiceChatbot {
     saveMessageToHistory(messageObj) {
         try {
             let history = [];
-            const saved = localStorage.getItem('chatHistory');
+            const saved = localStorage.getItem(this.keyHistory(this.activeChatId));
             if (saved) {
                 history = JSON.parse(saved);
             }
@@ -1222,7 +1397,10 @@ class VoiceChatbot {
                 history = history.slice(-50);
             }
             
-            localStorage.setItem('chatHistory', JSON.stringify(history));
+            localStorage.setItem(this.keyHistory(this.activeChatId), JSON.stringify(history));
+            // Update preview timestamp
+            const c = this.chats.find(x => x.id === this.activeChatId);
+            if (c) { c.updatedAt = Date.now(); this.persistChats(); this.renderChatList(); }
         } catch (error) {
             console.error('Error saving message to history:', error);
         }
@@ -1250,7 +1428,7 @@ class VoiceChatbot {
             const scrollHeight = this.elements.chatMessages.scrollHeight;
             const clientHeight = this.elements.chatMessages.clientHeight;
             
-            localStorage.setItem('chatScrollPosition', JSON.stringify({
+            localStorage.setItem(this.keyScroll(this.activeChatId), JSON.stringify({
                 scrollTop,
                 scrollHeight,
                 clientHeight,
@@ -1264,7 +1442,7 @@ class VoiceChatbot {
     // Restore scroll position from localStorage
     restoreScrollPosition() {
         try {
-            const savedPosition = localStorage.getItem('chatScrollPosition');
+            const savedPosition = localStorage.getItem(this.keyScroll(this.activeChatId));
             if (!savedPosition) {
                 this.scrollToBottom();
                 return;
@@ -1300,6 +1478,28 @@ class VoiceChatbot {
             console.error('Error restoring scroll position:', error);
             this.scrollToBottom();
         }
+    }
+
+    // If chat title is still default, set it from the first user message
+    maybeAutoTitleFromFirstMessage() {
+        const c = this.chats.find(x => x.id === this.activeChatId);
+        if (!c || (c.title && c.title !== 'New Chat')) return;
+        try {
+            const saved = localStorage.getItem(this.keyHistory(this.activeChatId));
+            const hist = saved ? JSON.parse(saved) : [];
+            const firstUser = hist.find(m => m.role === 'user');
+            if (firstUser) {
+                const plain = (firstUser.content || '').replace(/\s+/g, ' ').trim();
+                const title = plain.split(' ').slice(0, 6).join(' ');
+                if (title) {
+                    c.title = title + (plain.split(' ').length > 6 ? '…' : '');
+                    c.updatedAt = Date.now();
+                    this.persistChats();
+                    this.renderChatList();
+                    this.updateChatTitle();
+                }
+            }
+        } catch {}
     }
 }
 

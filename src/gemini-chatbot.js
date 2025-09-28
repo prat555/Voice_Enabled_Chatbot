@@ -1,9 +1,11 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
-// Shared conversation history across instances (for serverless environments)
-let globalChatHistory = [];
-const MAX_HISTORY_LENGTH = 20;
+// In-memory histories keyed by chatId (persists per process/lambda instance)
+// Using Map for safer key handling; fallback key 'default' for backward compatibility
+const chatHistories = new Map();
+const DEFAULT_CHAT_ID = 'default';
+const MAX_HISTORY_LENGTH = 20; // per chat
 
 class GeminiChatbot {
     constructor() {
@@ -12,30 +14,31 @@ class GeminiChatbot {
         }
 
         this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        // Slight temperature to encourage varied phrasing while staying relevant
         this.model = this.genAI.getGenerativeModel({
             model: 'gemini-2.5-flash',
-            generationConfig: { temperature: 0.7 }
+            generationConfig: { temperature: 0.7 },
         });
-        
-        // Use shared history for persistence across API calls
-        this.chatHistory = globalChatHistory;
         this.maxHistoryLength = MAX_HISTORY_LENGTH;
     }
 
-    // Now maintains conversation history for context
-    async generateResponse(userMessage) {
-        try {
-            // Add user message to history
-            this.chatHistory.push({
-                role: 'user',
-                content: userMessage,
-                timestamp: new Date().toISOString()
-            });
+    // Utility: get or create a chat history array for given chatId
+    getHistory(chatId) {
+        const id = (chatId && typeof chatId === 'string' && chatId.trim()) ? chatId.trim() : DEFAULT_CHAT_ID;
+        if (!chatHistories.has(id)) chatHistories.set(id, []);
+        return { id, history: chatHistories.get(id) };
+    }
 
-            // Build conversation context
-            const conversationContext = this.buildConversationContext();
-            
+    // Generate model response with per-chat memory
+    async generateResponse(userMessage, chatId) {
+        try {
+            const { id, history } = this.getHistory(chatId);
+
+            // Add user message
+            history.push({ role: 'user', content: userMessage, timestamp: new Date().toISOString() });
+
+            // Build context from recent history (excluding the just-added user message)
+            const conversationContext = this.buildConversationContext(history);
+
             const instruction = [
                 'You are a helpful assistant. Follow these rules strictly:',
                 '- You have access to our conversation history and can reference previous messages.',
@@ -52,30 +55,18 @@ class GeminiChatbot {
             const response = await result.response;
             let text = response.text() || '';
 
-            // Post-process to ensure we never start with common fillers like "Okay"
             text = this.postProcess(text);
 
-            // Add assistant response to history
-            this.chatHistory.push({
-                role: 'assistant',
-                content: text,
-                timestamp: new Date().toISOString()
-            });
+            // Add assistant message
+            history.push({ role: 'assistant', content: text, timestamp: new Date().toISOString() });
 
-            // Trim history if it gets too long
-            this.trimHistory();
+            // Trim per-chat history
+            this.trimHistory(id);
 
-            return {
-                success: true,
-                response: text,
-                timestamp: new Date().toISOString()
-            };
-
+            return { success: true, response: text, timestamp: new Date().toISOString() };
         } catch (error) {
             console.error('Error generating response:', error);
-
             let errorMessage = 'Sorry, I encountered an error processing your request.';
-
             if (error?.message?.includes('API_KEY_INVALID')) {
                 errorMessage = 'Invalid API key. Please check your Gemini API key configuration.';
             } else if (error?.message?.includes('QUOTA_EXCEEDED')) {
@@ -83,65 +74,53 @@ class GeminiChatbot {
             } else if (error?.message?.includes('RATE_LIMIT_EXCEEDED')) {
                 errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
             }
-
-            return {
-                success: false,
-                error: errorMessage,
-                timestamp: new Date().toISOString()
-            };
+            return { success: false, error: errorMessage, timestamp: new Date().toISOString() };
         }
     }
 
     postProcess(text) {
         let t = (text || '').trim();
-        // Remove common opener fillers if present at the very start
         t = t.replace(/^(okay|ok|alright|sure)[,\s:;-]*/i, '').trim();
-        // Collapse excessive blank lines
         t = t.replace(/\n{3,}/g, '\n\n').trim();
         return t;
     }
 
-    // Build conversation context for the AI
-    buildConversationContext() {
-        if (this.chatHistory.length === 0) {
-            return 'No previous conversation.';
-        }
-
-        // Get the last few messages for context (excluding the current user message we just added)
-        const contextMessages = this.chatHistory.slice(-11, -1); // Last 10 messages before current
-        
-        if (contextMessages.length === 0) {
-            return 'No previous conversation.';
-        }
-
+    // Build conversation context for the AI from a history array
+    buildConversationContext(historyArr) {
+        const h = Array.isArray(historyArr) ? historyArr : [];
+        if (h.length === 0) return 'No previous conversation.';
+        const contextMessages = h.slice(-11, -1); // Last 10 before current
+        if (contextMessages.length === 0) return 'No previous conversation.';
         return contextMessages.map(msg => {
             const role = msg.role === 'user' ? 'User' : 'Assistant';
             return `${role}: ${msg.content}`;
         }).join('\n');
     }
 
-    // Keep history manageable
-    trimHistory() {
-        if (this.chatHistory.length > this.maxHistoryLength) {
-            // Keep the most recent messages
-            this.chatHistory = this.chatHistory.slice(-this.maxHistoryLength);
+    // Trim a specific chat's history
+    trimHistory(chatId) {
+        const { id, history } = this.getHistory(chatId);
+        if (history.length > this.maxHistoryLength) {
+            const trimmed = history.slice(-this.maxHistoryLength);
+            chatHistories.set(id, trimmed);
         }
     }
 
-    // Clear history and return updated state
-    clearHistory() {
-        globalChatHistory.length = 0; // Clear the shared history
-        this.chatHistory = globalChatHistory;
+    // Clear a specific chat; if no chatId provided and options.all === true, clears all
+    clearHistory(chatId, options = {}) {
+        if (options.all === true && (!chatId || chatId === DEFAULT_CHAT_ID)) {
+            chatHistories.clear();
+            return { success: true, message: 'All chats cleared', count: 0 };
+        }
+        const { id } = this.getHistory(chatId);
+        chatHistories.set(id, []);
         return { success: true, message: 'Chat history cleared', count: 0 };
     }
 
-    // Get current chat history
-    getChatHistory() {
-        return { 
-            success: true, 
-            history: this.chatHistory,
-            count: this.chatHistory.length 
-        };
+    // Get current chat history for a chatId (or default)
+    getChatHistory(chatId) {
+        const { id, history } = this.getHistory(chatId);
+        return { success: true, history, count: history.length, chatId: id };
     }
 }
 

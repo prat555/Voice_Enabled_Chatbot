@@ -263,15 +263,17 @@ class SpeechHandler {
         const hasRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
         const hasSynthesis = 'speechSynthesis' in window;
         
-        if (hasRecognition && hasSynthesis) {
-            speechSupport.innerHTML = '<i class="fas fa-microphone"></i> Speech: Fully Supported';
-            speechSupport.className = 'speech-support supported';
-        } else if (hasRecognition || hasSynthesis) {
-            speechSupport.innerHTML = '<i class="fas fa-microphone-slash"></i> Speech: Partially Supported';
-            speechSupport.className = 'speech-support partial';
-        } else {
-            speechSupport.innerHTML = '<i class="fas fa-microphone-slash"></i> Speech: Not Supported';
-            speechSupport.className = 'speech-support not-supported';
+        if (speechSupport) {
+            if (hasRecognition && hasSynthesis) {
+                speechSupport.innerHTML = '<i class="fas fa-microphone"></i> Speech: Fully Supported';
+                speechSupport.className = 'speech-support supported';
+            } else if (hasRecognition || hasSynthesis) {
+                speechSupport.innerHTML = '<i class="fas fa-microphone-slash"></i> Speech: Partially Supported';
+                speechSupport.className = 'speech-support partial';
+            } else {
+                speechSupport.innerHTML = '<i class="fas fa-microphone-slash"></i> Speech: Not Supported';
+                speechSupport.className = 'speech-support not-supported';
+            }
         }
 
         return { recognition: hasRecognition, synthesis: hasSynthesis };

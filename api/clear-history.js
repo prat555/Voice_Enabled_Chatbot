@@ -5,9 +5,9 @@ export default async function handler(req, res) {
       // Import the chatbot to clear history
       const { default: GeminiChatbot } = await import('../src/gemini-chatbot.js');
       const chatbot = new GeminiChatbot();
-      
-      // Clear the conversation history
-      const result = chatbot.clearHistory();
+      const { chatId, all } = req.body || {};
+      // Clear the conversation history (specific chat or all when all === true)
+      const result = chatbot.clearHistory(chatId, { all: all === true });
       
       return res.json({
         success: true,
@@ -26,8 +26,8 @@ export default async function handler(req, res) {
       // Import the chatbot to get current history
       const { default: GeminiChatbot } = await import('../src/gemini-chatbot.js');
       const chatbot = new GeminiChatbot();
-      
-      const historyResult = chatbot.getChatHistory();
+      const { chatId } = req.query || {};
+      const historyResult = chatbot.getChatHistory(chatId);
       
       return res.json({
         success: true,

@@ -8,9 +8,9 @@ export default async function handler(req, res) {
     // Import the chatbot to access history
     const { default: GeminiChatbot } = await import('../src/gemini-chatbot.js');
     const chatbot = new GeminiChatbot();
-    
-    // Get the current chat history
-    const historyResult = chatbot.getChatHistory();
+    // Get the current chat history for optional chatId
+    const { chatId } = req.query || {};
+    const historyResult = chatbot.getChatHistory(chatId);
     
     return res.json({
       success: true,

@@ -41,7 +41,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // API Routes
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message } = req.body;
+        const { message, chatId } = req.body;
 
         if (!message || typeof message !== 'string') {
             return res.status(400).json({ success: false, error: 'Message is required and must be a string' });
@@ -55,7 +55,7 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Message too long. Maximum 1000 characters allowed.' });
         }
 
-        const result = await chatbot.generateResponse(message.trim());
+        const result = await chatbot.generateResponse(message.trim(), chatId);
         res.json(result);
     } catch (error) {
         console.error('Chat API error:', error);
@@ -66,7 +66,8 @@ app.post('/api/chat', async (req, res) => {
 // Clear chat history
 app.post('/api/clear-history', (req, res) => {
     try {
-        const result = chatbot.clearHistory();
+        const { chatId, all } = req.body || {};
+        const result = chatbot.clearHistory(chatId, { all: all === true });
         res.json(result);
     } catch (error) {
         console.error('Clear history error:', error);
@@ -77,7 +78,8 @@ app.post('/api/clear-history', (req, res) => {
 // Get chat history
 app.get('/api/history', (req, res) => {
     try {
-        const result = chatbot.getChatHistory();
+        const { chatId } = req.query || {};
+        const result = chatbot.getChatHistory(chatId);
         res.json(result);
     } catch (error) {
         console.error('Get history error:', error);

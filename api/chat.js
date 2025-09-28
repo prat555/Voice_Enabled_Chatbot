@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const { default: GeminiChatbot } = await import('../src/gemini-chatbot.js');
     const chatbot = new GeminiChatbot();
 
-    const { message } = req.body || {};
+  const { message, chatId } = req.body || {};
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ success: false, error: 'Message is required and must be a string' });
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Message too long. Maximum 1000 characters allowed.' });
     }
 
-    const result = await chatbot.generateResponse(message.trim());
+  const result = await chatbot.generateResponse(message.trim(), chatId);
     // result already has { success, response | error, timestamp }
     return res.status(result.success ? 200 : 500).json(result);
   } catch (error) {

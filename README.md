@@ -46,17 +46,6 @@ npm start
 - Visit http://localhost:3000
 - Allow microphone access when prompted
 
-## Using the App 📖
-
-- Mic button: start/stop listening
-- Stop button: immediately stop speaking
-- Send button or Enter: send typed message
-- Auto-speak: automatically speak assistant replies
-- Continuous listening: resumes listening after responses
-- Theme toggle: switch light/dark; saved to localStorage
-- Settings (gear): pick a TTS voice and adjust rate/pitch/volume
-- Copy icon on assistant bubbles: copy the response text
-
 ## Model Configuration 🤖
 
 By default, the app uses:
@@ -118,37 +107,3 @@ Speech settings can be changed live in the Settings modal (saved to localStorage
 ```js
 this.recognition.lang = 'en-US';
 ```
-
-## Browser Compatibility 🌐
-
-Speech Recognition:
-- ✅ Chrome/Chromium, Edge
-- ⚠️ Safari/Firefox: partial/behind flags
-
-Text-to-Speech:
-- ✅ All modern browsers (voice list depends on OS/browser)
-
-## Troubleshooting 🔧
-
-- 404 model not found: Use a valid model (e.g., `gemini-2.5-flash`) available to your key.
-- Port already in use: change `PORT` in `.env`.
-- Mic blocked: allow microphone access in the address bar and refresh.
-- Speech not supported: try Chrome/Edge or ensure site is served over HTTP(S).
-- Icons not visible: CSP allows cdnjs; ensure internet access to the CDN.
-
-## Security 🔒
-
-- Keep `.env` out of version control (already in `.gitignore`).
-- Never hardcode API keys in source files or the README.
-- Use HTTPS in production (required for some browser APIs and good practice).
-
-## Acknowledgments 🙏
-
-- Google Gemini for AI capabilities
-- Web Speech API for recognition and TTS
-- Express.js for the server
-- Font Awesome for icons (via cdnjs)
-
----
-
-Happy chatting! 🎉

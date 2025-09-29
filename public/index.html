@@ -20,8 +20,11 @@
 </head>
 <body>
     <div class="app-shell">
+        <!-- Mobile overlay -->
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+        
         <!-- Sidebar -->
-            <aside class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
                     <div class="brand"><i class="fas fa-robot"></i><span class="title">Voice-Enabled Chatbot</span></div>
                 </div>
@@ -52,6 +55,9 @@
         <!-- Main panel -->
         <main class="main">
                     <header class="topbar">
+                        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
                         <div class="brand">
                             <i class="fas fa-comments"></i>
                             <span class="title" id="chatTitle">Chat</span>

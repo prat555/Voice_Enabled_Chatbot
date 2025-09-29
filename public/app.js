@@ -29,6 +29,9 @@ class VoiceChatbot {
             loadingOverlay: document.getElementById('loadingOverlay'),
             connectionStatus: document.getElementById('connectionStatus'),
             typingIndicator: document.getElementById('typingIndicator'),
+            sidebar: document.getElementById('sidebar'),
+            mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+            mobileOverlay: document.getElementById('mobileOverlay'),
             themeToggle: document.getElementById('themeToggle'),
             scrollBottomChat: document.getElementById('scrollBottomChat'),
             stopSpeaking: document.getElementById('stopSpeaking'),
@@ -78,6 +81,27 @@ class VoiceChatbot {
         // Delete all chats
         this.elements.deleteAllBtn?.addEventListener('click', () => {
             this.deleteAllChats();
+        });
+
+        // Mobile menu functionality
+        this.elements.mobileMenuBtn?.addEventListener('click', () => {
+            this.toggleMobileMenu();
+        });
+
+        this.elements.mobileOverlay?.addEventListener('click', () => {
+            this.closeMobileMenu();
+        });
+
+        // Close mobile menu when clicking on chat messages area
+        this.elements.chatMessages?.addEventListener('click', () => {
+            this.closeMobileMenu();
+        });
+
+        // Handle window resize to close mobile menu
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 820) {
+                this.closeMobileMenu();
+            }
         });
 
         // Chat list actions (select/rename/delete)
@@ -1608,4 +1632,41 @@ VoiceChatbot.prototype.populateVoices = function() {
 VoiceChatbot.prototype.applySpeechConfig = function(cfg) {
     const saved = cfg || JSON.parse(localStorage.getItem('speechConfig') || '{}');
     this.speechHandler.setSpeechConfig(saved);
+};
+
+// Mobile menu functionality
+VoiceChatbot.prototype.toggleMobileMenu = function() {
+    const sidebar = this.elements.sidebar;
+    const overlay = this.elements.mobileOverlay;
+    
+    if (sidebar && overlay) {
+        const isOpen = sidebar.classList.contains('show');
+        if (isOpen) {
+            this.closeMobileMenu();
+        } else {
+            this.openMobileMenu();
+        }
+    }
+};
+
+VoiceChatbot.prototype.openMobileMenu = function() {
+    const sidebar = this.elements.sidebar;
+    const overlay = this.elements.mobileOverlay;
+    
+    if (sidebar && overlay) {
+        sidebar.classList.add('show');
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+VoiceChatbot.prototype.closeMobileMenu = function() {
+    const sidebar = this.elements.sidebar;
+    const overlay = this.elements.mobileOverlay;
+    
+    if (sidebar && overlay) {
+        sidebar.classList.remove('show');
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+    }
 };

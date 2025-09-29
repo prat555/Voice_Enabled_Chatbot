@@ -1437,7 +1437,7 @@ class VoiceChatbot {
                 <div class="message-content">
                     <i class="fas fa-robot"></i>
                     <div class="text">
-                        Hi! I'm your voice-enabled AI assistant. You can either type your message or click the microphone button to speak to me. How can I help you today?
+                        Hello! I'm your AI assistant. You can either type your message or click the microphone button to speak to me. How can I help you today?
                     </div>
                 </div>
                 <div class="message-time"></div>

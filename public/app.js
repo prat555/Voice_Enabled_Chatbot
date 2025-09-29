@@ -12,6 +12,13 @@ class VoiceChatbot {
         this.setupSpeechHandler();
         this.checkServerConnection();
         this.bootstrapChats(); // Initialize chats and load active history
+
+        // Ensure voices are populated as soon as they are available (fixes mobile default voice issue)
+        if (window.speechSynthesis) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                this.populateVoices();
+            };
+        }
     }
 
     initializeElements() {

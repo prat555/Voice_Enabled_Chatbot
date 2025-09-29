@@ -1333,3 +1333,28 @@ body {
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
 .primary-button, .secondary-button { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--muted); color: var(--text-primary); cursor: pointer; }
 .primary-button { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%); color: #fff; border: none; }
+
+/* Make Save button in settings modal black in light mode, especially for mobile */
+@media (max-width: 600px) {
+    .modal-footer .primary-button {
+        color: var(--text-primary) !important;
+        background: var(--muted) !important;
+        border: 1px solid var(--border);
+        box-shadow: none;
+    }
+}
+
+/* Also ensure in all light mode (desktop/mobile) it's black on white */
+.modal-footer .primary-button {
+    color: var(--text-primary) !important;
+    background: var(--muted) !important;
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+/* But keep white text in dark mode */
+.dark .modal-footer .primary-button {
+    color: #fff !important;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%) !important;
+    border: none;
+}

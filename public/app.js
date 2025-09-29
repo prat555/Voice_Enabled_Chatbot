@@ -291,23 +291,42 @@ class VoiceChatbot {
         }
     }
 
-    // Convert Markdown to HTML with comprehensive syntax support
+    // Convert Markdown to HTML with ''' and ``` code block support
     markdownToHtml(text) {
+        // Handle code blocks with triple single quotes ''' and triple backticks ```
+        let html = '';
+        // Regex for both ''' and ``` code blocks
+        let codeBlockRegex = /(```|''')([\s\S]*?)(\1)/g;
+        let lastIndex = 0;
+        let match;
+        while ((match = codeBlockRegex.exec(text)) !== null) {
+            // Text before code block
+            const before = text.slice(lastIndex, match.index);
+            html += this._markdownToHtmlNoCode(before);
+            // Code block content
+            const code = match[2].replace(/^\n+|\n+$/g, '');
+            html += `<pre><code>${this.escapeHtml(code)}</code></pre>`;
+            lastIndex = match.index + match[0].length;
+        }
+        // Remaining text after last code block
+        html += this._markdownToHtmlNoCode(text.slice(lastIndex));
+        return html;
+    }
+
+    // Helper: markdown to HTML but ignore ''' code blocks
+    _markdownToHtmlNoCode(text) {
         // First, split into blocks (paragraphs separated by double newlines)
         const blocks = text.split(/\n\n+/).filter(block => block.trim());
         let html = '';
-        let globalListCounters = {}; // Track numbering across the entire document
-        
+        let globalListCounters = {};
         for (let block of blocks) {
             block = block.trim();
             if (!block) continue;
-            
             // Check for horizontal rules (need at least 3 chars and only whitespace after)
             if (/^(---+|\*{3,}|_{3,})\s*$/.test(block)) {
                 html += '<hr>';
                 continue;
             }
-            
             // Check for headings
             const headingMatch = block.match(/^(#{1,6})\s+(.+)$/);
             if (headingMatch) {
@@ -316,7 +335,6 @@ class VoiceChatbot {
                 html += `<h${level}>${content}</h${level}>`;
                 continue;
             }
-
             // Check for tables (look for pipe characters)
             if (block.includes('|')) {
                 const tableHtml = this.processTable(block);
@@ -325,81 +343,60 @@ class VoiceChatbot {
                     continue;
                 }
             }
-            
             // Process each line individually to handle mixed content
             const lines = block.split('\n');
             let currentListItems = [];
             let pendingParagraph = '';
-            
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 const trimmedLine = line.trim();
-                
-                if (!trimmedLine) continue; // Skip empty lines
-                
+                if (!trimmedLine) continue;
                 // Check for numbered list: 1. item or 1) item
                 const numberedMatch = line.match(/^(\s*)(\d+)[\.\)]\s+(.+)$/);
                 if (numberedMatch) {
-                    // If we have a pending paragraph, add it first
                     if (pendingParagraph.trim()) {
                         html += `<p>${this.processInlineMarkdown(pendingParagraph.trim())}</p>`;
                         pendingParagraph = '';
                     }
-                    
                     const indent = numberedMatch[1];
                     const content = this.processInlineMarkdown(numberedMatch[3]);
                     const level = Math.floor(indent.length / 4);
-                    
-                    // Initialize counter for this level if not exists
                     if (!globalListCounters[level]) {
                         globalListCounters[level] = 1;
                     }
-                    
                     currentListItems.push({ type: 'ol', level, content });
                     continue;
                 }
-                
                 // Check for bulleted list: - item, * item, + item
                 const bulletMatch = line.match(/^(\s*)[-\*\+]\s+(.+)$/);
                 if (bulletMatch) {
-                    // If we have a pending paragraph, add it first
                     if (pendingParagraph.trim()) {
                         html += `<p>${this.processInlineMarkdown(pendingParagraph.trim())}</p>`;
                         pendingParagraph = '';
                     }
-                    
                     const indent = bulletMatch[1];
                     const content = this.processInlineMarkdown(bulletMatch[2]);
                     const level = Math.floor(indent.length / 4);
                     currentListItems.push({ type: 'ul', level, content });
                     continue;
                 }
-                
-                // If we were building a list and hit a non-list line, output the list
                 if (currentListItems.length > 0) {
                     html += this.buildSequentialNestedList(currentListItems, globalListCounters);
                     currentListItems = [];
                 }
-                
-                // Regular line - add to pending paragraph
                 if (pendingParagraph) {
                     pendingParagraph += ' ' + trimmedLine;
                 } else {
                     pendingParagraph = trimmedLine;
                 }
             }
-            
-            // Process any remaining list items
             if (currentListItems.length > 0) {
                 html += this.buildSequentialNestedList(currentListItems, globalListCounters);
             }
-            
-            // Process any remaining paragraph content
             if (pendingParagraph.trim()) {
                 html += `<p>${this.processInlineMarkdown(pendingParagraph.trim())}</p>`;
             }
         }
-        
         return html;
     }
     
@@ -1008,7 +1005,9 @@ class VoiceChatbot {
         messageDiv.innerHTML = `
             <div class="message-content">
                 <i class="fas fa-${role === 'user' ? 'user' : 'robot'}"></i>
-                <div class="text">${processedContent}${role === 'assistant' ? '<div class="copy-actions"><button class="copy-btn copy-plain" title="Copy text"><i class="fas fa-copy"></i></button></div>' : ''}</div>
+                <div class="text">${processedContent}
+                    ${role === 'assistant' ? '<button class="copy-btn copy-plain bottom-right" title="Copy response"><i class="fas fa-copy"></i></button>' : ''}
+                </div>
             </div>
             <div class="message-time">${timeString}</div>
         `;

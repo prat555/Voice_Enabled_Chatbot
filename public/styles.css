@@ -148,17 +148,62 @@ body {
     margin-left: auto;
 }
 
-.input-row { 
+
+/* Input row: now only one child (input-wrapper) */
+.input-row {
     display: flex;
     align-items: flex-end;
-    gap: 12px; 
+    gap: 0;
 }
 
-.input-wrapper {
-    flex: 1;
+/* Input with buttons inside */
+.input-with-buttons {
+    position: relative;
     display: flex;
-    flex-direction: column;
+    flex: 1;
+    align-items: stretch;
+}
+
+.input-with-buttons textarea {
+    width: 100%;
+    padding-right: 100px; /* space for buttons */
+}
+
+.input-buttons {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    display: flex;
     gap: 8px;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+
+.inside-input.mic-button, .inside-input.send-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-shadow: none;
+    margin: 0;
+}
+
+.inside-input.mic-button {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: #fff;
+}
+
+.inside-input.send-button {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+    color: #fff;
+}
+
+/* Remove old mic/send button from outside input */
+#micButton:not(.inside-input),
+#sendButton:not(.inside-input) {
+    display: none !important;
 }
 
 .composer-controls { 
@@ -475,11 +520,66 @@ body {
 
 /* Copy button container to avoid overlaying text */
 .assistant-message .text { padding-right: 48px; }
-.copy-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity 0.2s ease; }
-.assistant-message .text:hover .copy-actions { opacity: 1; }
-.copy-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: rgba(0,0,0,0.06); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.dark .copy-btn { background: rgba(255,255,255,0.08); color: #e5e7eb; }
-.copy-btn:hover { background: rgba(0,0,0,0.12); }
+
+/* New copy button style for assistant response */
+
+
+.assistant-message .copy-btn.bottom-right {
+    position: absolute;
+    top: auto;
+    bottom: 10px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #f4f4f5;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: background 0.15s, color 0.15s, border 0.15s, opacity 0.18s;
+    z-index: 2;
+    padding: 0;
+}
+.assistant-message .text:hover .copy-btn.bottom-right,
+.assistant-message .copy-btn.bottom-right:focus {
+    opacity: 1;
+    pointer-events: auto;
+}
+.assistant-message .copy-btn.bottom-right:hover {
+    background: #e5e7eb;
+    color: #333;
+    border: 1px solid #cbd5e1;
+}
+.dark .assistant-message .copy-btn.bottom-right {
+    background: #23272f;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+}
+.dark .assistant-message .copy-btn.bottom-right:hover {
+    background: #2d323c;
+    color: #fff;
+    border: 1px solid #475569;
+}
+
+/* Adjust icon position inside the copy button */
+.assistant-message .copy-btn.bottom-right i {
+    position: relative;
+    top: -2px; /* Move the icon slightly upward */
+}
+
+/* Reduce the size of the copy button icon */
+.assistant-message .copy-btn.bottom-right i {
+    font-size: 0.85rem; /* Make the icon smaller */
+}
+
+/* Remove old copy-actions style */
+.copy-actions { display: none !important; }
 
 /* Markdown formatting styles */
 .text h1, .text h2, .text h3, .text h4 {
@@ -539,16 +639,52 @@ body {
     color: var(--text-secondary);
 }
 
-.text code {
-    background: rgba(0, 0, 0, 0.1);
+
+/* Inline code only (not code blocks) */
+.text code:not(pre code) {
+    background: rgba(0, 0, 0, 0.06);
     padding: 2px 6px;
     border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
 }
 
-.dark .text code {
-    background: rgba(255, 255, 255, 0.1);
+.dark .text code:not(pre code) {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Code block styling */
+.text pre {
+    background: #f5f7fa;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 18px 18px 18px 18px;
+    margin: 18px 0;
+    overflow-x: auto;
+    font-size: 1rem;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    max-width: 100%;
+}
+.text pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
+    color: #222;
+    display: block;
+    white-space: pre;
+}
+.dark .text pre {
+    background: #181f2a;
+    border: 1.5px solid #334155;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.dark .text pre code {
+    color: #e2e8f0;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
 }
 
 .text ul {

@@ -1438,6 +1438,18 @@ body {
 
 @media (max-width: 480px) {
     .composer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+    }
+    
+    .sidebar {
+        z-index: 1100; /* Ensure sidebar appears above composer */
+    }
+    
+    .composer {
         padding: 10px 12px;
     }
     

@@ -79,25 +79,16 @@
                 </div>
             </section>
 
+            <button id="scrollBottomChat" class="scroll-bottom-chat" title="Scroll to latest" aria-label="Scroll to bottom">
+                <i class="fas fa-arrow-down"></i>
+            </button>
+
             <div id="typingIndicator" class="typing-indicator" aria-hidden="true">
                 <span></span><span></span><span></span>
             </div>
 
             <footer class="composer">
-                <div class="voice-bar">
-                    <div class="voice-controls-left">
-                        <!-- micButton moved inside input area -->
-                    </div>
-                    <div class="voice-controls-right">
-                        <button id="stopSpeaking" class="stop-speaking-btn" title="Stop speaking" aria-label="Stop speaking">
-                            <i class="fas fa-stop"></i>
-                        </button>
-                        <button id="scrollBottomChat" class="scroll-bottom-chat" title="Scroll to latest" aria-label="Scroll to bottom">
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                    </div>
-                </div>
-
+                
                 <div class="input-row">
                     <div class="input-wrapper input-with-buttons">
                         <textarea id="messageInput" placeholder="Message Gemini…" rows="1" maxlength="1000"></textarea>
@@ -105,10 +96,7 @@
                             <button id="micButton" class="mic-button inside-input" title="Start/stop listening">
                                 <i class="fas fa-microphone"></i>
                             </button>
-                            <button id="sendButton" class="send-button inside-input" title="Send">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
+                                                    </div>
                     </div>
                 </div>
 

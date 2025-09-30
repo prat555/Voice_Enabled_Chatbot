@@ -12,6 +12,9 @@ class VoiceChatbot {
         this.setupSpeechHandler();
         this.checkServerConnection();
         this.bootstrapChats(); // Initialize chats and load active history
+        
+        // Initialize scroll button state
+        this.updateScrollButton();
 
         // Ensure voices are populated as soon as they are available (fixes mobile default voice issue)
         if (window.speechSynthesis) {
@@ -60,7 +63,7 @@ class VoiceChatbot {
 
     setupEventListeners() {
         // Send message button
-        this.elements.sendButton.addEventListener('click', () => {
+        this.elements.sendButton?.addEventListener('click', () => {
             this.sendMessage();
         });
 
@@ -164,8 +167,8 @@ class VoiceChatbot {
         this.elements.themeToggle.addEventListener('click', () => this.toggleTheme());
 
         // Chat controls
-        this.elements.scrollBottomChat.addEventListener('click', () => this.scrollToBottom(true));
-        this.elements.stopSpeaking.addEventListener('click', () => {
+        this.elements.scrollBottomChat?.addEventListener('click', () => this.scrollToBottom(true));
+        this.elements.stopSpeaking?.addEventListener('click', () => {
             this.speechHandler.stopSpeaking();
         });
         this.elements.chatMessages.addEventListener('scroll', () => {
@@ -996,9 +999,6 @@ class VoiceChatbot {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message`;
         
-        const now = new Date();
-        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
     // Use markdown rendering for assistant messages, escape HTML for user messages
     const processedContent = role === 'assistant' ? this.markdownToHtml(content) : this.escapeHtml(content);
         
@@ -1009,7 +1009,6 @@ class VoiceChatbot {
                     ${role === 'assistant' ? '<button class="copy-btn copy-plain bottom-right" title="Copy response"><i class="fas fa-copy"></i></button>' : ''}
                 </div>
             </div>
-            <div class="message-time">${timeString}</div>
         `;
 
         this.elements.chatMessages.appendChild(messageDiv);
@@ -1087,7 +1086,6 @@ class VoiceChatbot {
                                 Chat history cleared! How can I help you today?
                             </div>
                         </div>
-                        <div class="message-time"></div>
                     </div>
                 `;
                 
@@ -1107,7 +1105,7 @@ class VoiceChatbot {
 
     setLoadingState(loading) {
         this.isLoading = loading;
-        this.elements.sendButton.disabled = loading;
+        this.elements.sendButton && (this.elements.sendButton.disabled = loading);
         this.elements.messageInput.disabled = loading;
         this.elements.micButton.disabled = loading;
         
@@ -1176,6 +1174,7 @@ class VoiceChatbot {
     }
 
     updateScrollButton() {
+        if (!this.elements.scrollBottomChat) return;
         const atBottom = this.elements.chatMessages.scrollHeight - this.elements.chatMessages.scrollTop - this.elements.chatMessages.clientHeight < 10;
         this.elements.scrollBottomChat.classList.toggle('show', !atBottom);
     }
@@ -1446,7 +1445,6 @@ class VoiceChatbot {
                         Hello! I'm your AI assistant. You can either type your message or click the microphone button to speak to me. How can I help you today?
                     </div>
                 </div>
-                <div class="message-time"></div>
             </div>
         `;
     }

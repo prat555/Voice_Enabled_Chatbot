@@ -1455,6 +1455,7 @@ body {
     
     .thread {
         padding: 8px 12px;
+        margin-bottom: 60px; /* Add space equal to the height of the composer */
     }
     
     .topbar {

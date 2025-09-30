@@ -486,19 +486,6 @@ body {
     width: 100vw;
     max-width: 100vw;
 }
-    .thread {
-        padding-bottom: 80px !important;
-    }
-    .composer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100vw;
-        max-width: 100vw;
-        z-index: 1000;
-        border-radius: 0;
-        box-shadow: 0 -2px 8px var(--shadow);
-    }
     .scroll-bottom-chat {
         bottom: 130px;
         right: 12px;

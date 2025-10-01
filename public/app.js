@@ -197,6 +197,11 @@ class VoiceChatbot {
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') this.closeSettings();
         });
+
+        // Range slider real-time updates
+        this.elements.rateRange.addEventListener('input', () => this.updateRangeLabels());
+        this.elements.pitchRange.addEventListener('input', () => this.updateRangeLabels());
+        this.elements.volumeRange.addEventListener('input', () => this.updateRangeLabels());
     }
 
     setupSpeechHandler() {

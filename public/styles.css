@@ -211,7 +211,7 @@ body {
 
 .inside-input.send-button {
     background: var(--bg-surface);
-    color: var(--primary);
+    color: var(--primary-light); /* use same tone as dark mode (purple), not blue */
     border: 1px solid var(--border);
 }
 
@@ -223,10 +223,22 @@ body {
 
 .inside-input.send-button:hover {
     background: var(--muted);
-    color: var(--primary-dark);
-    border-color: var(--primary);
+    color: var(--primary-light); /* keep purple on hover in light mode */
+    border-color: var(--primary-light);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px var(--primary-shadow);
+}
+
+/* Improve contrast for dark theme */
+.dark .inside-input.send-button {
+    background: var(--muted);
+    color: var(--primary-light);
+    border-color: var(--border);
+}
+.dark .inside-input.send-button:hover {
+    background: var(--bg-sidebar);
+    color: #fff;
+    border-color: var(--primary-light);
 }
 
 /* Remove old mic/send button from outside input */
@@ -1010,7 +1022,7 @@ body {
 }
 
 .send-button i {
-    color: white !important;
+    color: currentColor !important; /* inherit from button color for light/dark */
     font-size: 16px !important;
     opacity: 1 !important;
 }

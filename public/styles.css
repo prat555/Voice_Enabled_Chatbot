@@ -180,7 +180,7 @@ body {
 
 .input-with-buttons textarea {
     width: 100%;
-    padding-right: 84px; /* space for buttons */
+    padding-right: 78px; /* space for both buttons (32px + 32px + gaps) */
 }
 
 .input-buttons {
@@ -210,12 +210,21 @@ body {
 }
 
 .inside-input.send-button {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    color: white;
+    background: var(--bg-surface);
+    color: var(--primary);
+    border: 1px solid var(--border);
 }
 
-.inside-input.mic-button:hover, .inside-input.send-button:hover {
+.inside-input.mic-button:hover {
     background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--primary-shadow);
+}
+
+.inside-input.send-button:hover {
+    background: var(--muted);
+    color: var(--primary-dark);
+    border-color: var(--primary);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px var(--primary-shadow);
 }
@@ -1548,7 +1557,7 @@ body {
         line-height: 1.5;
         border-radius: 10px;
         padding: 12px 14px;
-        padding-right: 45px; /* Space for mic button */
+        padding-right: 78px; /* Space for both mic and send buttons */
     }
     
     .message .text {

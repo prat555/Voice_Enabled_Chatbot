@@ -550,6 +550,7 @@ body {
 .user-message .message-content {
     flex-direction: row-reverse;
     justify-content: flex-start;
+    padding-right: 8px;
 }
 
 .user-message .message-content i {
@@ -1346,7 +1347,7 @@ body {
     
     /* Ensure user messages also have proper spacing */
     .user-message .message-content {
-        padding-right: 12px;
+        padding-right: 8px;
     }
     
     .user-message .text {
@@ -1429,7 +1430,7 @@ body {
     
     /* Ensure user messages also have proper spacing */
     .user-message .message-content {
-        padding-right: 12px;
+        padding-right: 10px;
     }
     
     .user-message .text {
@@ -1561,7 +1562,7 @@ body {
     
     /* Ensure user messages also have proper spacing */
     .user-message .message-content {
-        padding-right: 14px;
+        padding-right: 10px;
     }
     
     .user-message .text {

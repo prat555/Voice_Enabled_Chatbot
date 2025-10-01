@@ -1,8 +1,8 @@
-# Voice-Enabled Chatbot – Single Chat 🗨️
+# Voice-Enabled Chatbot – Single Chat 
 
 A simplified version of the Gemini-powered chatbot with **only a single chat option**. Perfect if you just want a lightweight experience without multiple conversation threads.
 
-👉 **Live Demo**: [Single Chat Chatbot](https://voice-enabled-chatbot-teal.vercel.app/)
+**Live Demo**: [Single Chat Chatbot](https://voice-enabled-chatbot-teal.vercel.app/)
 
 ## Quick Start
 

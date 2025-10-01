@@ -211,8 +211,12 @@ body {
 
 .inside-input.send-button {
     background: var(--bg-surface);
-    color: var(--primary-light); /* use same tone as dark mode (purple), not blue */
+    color: var(--text-secondary); /* Use secondary text color for better contrast */
     border: 1px solid var(--border);
+}
+
+.inside-input.send-button i {
+    color: #475569 !important; /* Dark gray icon in light mode - easier on the eyes */
 }
 
 .inside-input.mic-button:hover {
@@ -223,22 +227,35 @@ body {
 
 .inside-input.send-button:hover {
     background: var(--muted);
-    color: var(--primary-light); /* keep purple on hover in light mode */
+    color: var(--text-primary);
     border-color: var(--primary-light);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px var(--primary-shadow);
 }
 
+.inside-input.send-button:hover i {
+    color: var(--text-primary) !important; /* Darker on hover for better visibility */
+}
+
 /* Improve contrast for dark theme */
 .dark .inside-input.send-button {
     background: var(--muted);
-    color: var(--primary-light);
+    color: #fff;
     border-color: var(--border);
 }
+
+.dark .inside-input.send-button i {
+    color: #fff !important; /* White icon in dark mode */
+}
+
 .dark .inside-input.send-button:hover {
     background: var(--bg-sidebar);
     color: #fff;
     border-color: var(--primary-light);
+}
+
+.dark .inside-input.send-button:hover i {
+    color: #fff !important; /* Keep white icon on hover in dark mode */
 }
 
 /* Remove old mic/send button from outside input */
@@ -1022,7 +1039,7 @@ body {
 }
 
 .send-button i {
-    color: currentColor !important; /* inherit from button color for light/dark */
+    color: #fff !important; /* White icon for gradient button */
     font-size: 16px !important;
     opacity: 1 !important;
 }

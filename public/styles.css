@@ -136,10 +136,11 @@ body {
 .composer { 
     border-top: 1px solid var(--border); 
     background: var(--bg-surface);
-    padding: 16px 24px; 
+    padding: 18px 24px; 
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+    box-shadow: 0 -2px 12px var(--shadow);
 }
 /* Redesigned composer for better layout */
 .voice-bar { 
@@ -543,7 +544,7 @@ body {
 
 .message-content i {
     font-size: 1.2rem;
-    margin-top: 5px;
+    margin-top: 6px;
 }
 
 .user-message .message-content {
@@ -563,17 +564,19 @@ body {
     background: var(--muted);
     padding: 12px 16px;
     border-radius: 12px;
-    max-width: 80%;
+    max-width: 85%;
     word-wrap: break-word;
     line-height: 1.5;
     position: relative;
     font-size: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .user-message .text {
     background: var(--bg-surface);
     color: var(--text-primary);
     border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* Dark mode user message - keep original blue gradient */
@@ -843,8 +846,9 @@ body {
 .message-time {
     font-size: 11px;
     color: var(--text-muted);
-    margin-top: 4px;
+    margin-top: 6px;
     text-align: right;
+    opacity: 0.8;
 }
 
 .user-message .message-time {
@@ -1217,8 +1221,8 @@ body {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 12px 16px;
-        padding-bottom: 20px;
+        padding: 20px 18px;
+        padding-bottom: 30px;
         -webkit-overflow-scrolling: touch;
     }
     
@@ -1324,14 +1328,30 @@ body {
     }
     
     .message {
-        margin-bottom: 16px;
+        margin-bottom: 28px;
+    }
+    
+    .message-content {
+        gap: 10px;
     }
     
     .message .text {
         max-width: 85%;
         font-size: 0.95rem;
-        line-height: 1.5;
-        padding: 12px 16px;
+        line-height: 1.6;
+        padding: 16px 18px;
+        margin-right: 12px;
+        border-radius: 16px;
+    }
+    
+    /* Ensure user messages also have proper spacing */
+    .user-message .message-content {
+        padding-right: 12px;
+    }
+    
+    .user-message .text {
+        margin-right: 0;
+        margin-left: 12px;
     }
     
     /* Hide suggestion chips on mobile */
@@ -1353,51 +1373,68 @@ body {
 
 @media (max-width: 640px) {
     .thread {
-        padding: 12px 16px;
-        padding-bottom: 20px;
+        padding: 18px 20px;
+        padding-bottom: 25px;
     }
     
     .topbar {
-        padding: 10px 16px;
+        padding: 12px 18px;
     }
     
     .composer {
-        padding: 12px 16px;
-        gap: 10px;
+        padding: 16px 20px;
+        gap: 14px;
         background: var(--bg-surface);
         border-top: 1px solid var(--border);
         box-shadow: 0 -2px 8px var(--shadow);
     }
     
+    .message-content {
+        gap: 10px;
+    }
+    
     .voice-controls-left,
     .voice-controls-right {
-        gap: 6px;
+        gap: 8px;
         flex-wrap: wrap;
     }
     
     .mic-button {
-        width: 42px;
-        height: 42px;
-        font-size: 1rem;
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
     }
     
     .send-button {
-        height: 42px;
-        min-width: 42px;
+        height: 44px;
+        min-width: 44px;
     }
     
     #messageInput {
         font-size: 16px; /* Prevents zoom on iOS */
-        min-height: 44px;
-        line-height: 1.4;
-        border-radius: 8px;
-        padding: 12px 14px;
+        min-height: 46px;
+        line-height: 1.5;
+        border-radius: 12px;
+        padding: 14px 16px;
     }
     
     .message .text {
-        max-width: 90%;
-        font-size: 0.9rem;
-        padding: 10px 14px;
+        max-width: 88%;
+        font-size: 0.92rem;
+        padding: 14px 16px;
+        margin-right: 12px;
+        border-radius: 14px;
+        line-height: 1.6;
+    }
+    
+    /* Ensure user messages also have proper spacing */
+    .user-message .message-content {
+        padding-right: 12px;
+    }
+    
+    .user-message .text {
+        margin-right: 0;
+        margin-left: 12px;
     }
     
     .brand .title {
@@ -1466,44 +1503,70 @@ body {
         padding: 8px 12px;
     }
     
-    .voice-bar {
+    .thread {
+        padding: 16px 20px;
+        padding-bottom: 25px;
+    }
+    
+    .topbar {
+        padding: 10px 16px;
+    }
+    
+    .message-content {
         gap: 8px;
+    }
+    
+    .voice-bar {
+        gap: 10px;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
     
     .input-row {
-        gap: 8px;
+        gap: 10px;
         align-items: flex-end;
     }
     
     .mic-button,
     .send-button {
-        width: 40px;
-        height: 40px;
-        font-size: 0.9rem;
+        width: 42px;
+        height: 42px;
+        font-size: 1rem;
         flex-shrink: 0;
     }
     
     .inside-input.mic-button {
-        width: 28px;
-        height: 28px;
-        font-size: 0.8rem;
+        width: 30px;
+        height: 30px;
+        font-size: 0.85rem;
     }
     
     #messageInput {
         font-size: 16px; /* Prevents zoom on iOS */
-        min-height: 40px;
-        line-height: 1.4;
-        border-radius: 8px;
-        padding: 10px 12px;
-        padding-right: 40px; /* Space for mic button */
+        min-height: 42px;
+        line-height: 1.5;
+        border-radius: 10px;
+        padding: 12px 14px;
+        padding-right: 45px; /* Space for mic button */
     }
     
     .message .text {
-        max-width: 95%;
-        font-size: 0.85rem;
-        padding: 8px 12px;
+        max-width: 85%;
+        font-size: 0.9rem;
+        padding: 12px 15px;
+        margin-right: 14px;
+        border-radius: 12px;
+        line-height: 1.6;
+    }
+    
+    /* Ensure user messages also have proper spacing */
+    .user-message .message-content {
+        padding-right: 14px;
+    }
+    
+    .user-message .text {
+        margin-right: 0;
+        margin-left: 14px;
     }
     
     .brand {

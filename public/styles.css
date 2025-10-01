@@ -61,8 +61,8 @@ body {
     color: var(--text-primary);
     margin: 0;
     padding: 0;
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 16px;
+    line-height: 1.6;
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
@@ -107,12 +107,12 @@ body {
     align-items: center; 
     gap: 8px; 
     font-weight: 500; 
-    font-size: 15px;
+    font-size: 17px;
     color: var(--text-primary);
 }
 
 .brand .title { 
-    font-size: 15px; 
+    font-size: 17px; 
     color: var(--text-primary);
     font-weight: 500;
 }
@@ -121,7 +121,7 @@ body {
     display: flex; 
     gap: 12px; 
     align-items: center; 
-    font-size: 13px; 
+    font-size: 14px; 
     color: var(--text-secondary); 
 }
 
@@ -239,7 +239,7 @@ body {
     align-items: center; 
     gap: 6px; 
     color: var(--text-secondary); 
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 400;
 }
 
@@ -331,8 +331,8 @@ body {
 .chatlist-item.active .icon-button:hover { 
     background: rgba(255,255,255,0.25); 
 }
-.chatlist-item .title { font-weight: 500; font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chatlist-item .meta { color: var(--text-secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chatlist-item .title { font-weight: 500; font-size: 15px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chatlist-item .meta { color: var(--text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chatlist-item .info { min-width: 0; }
 .chatlist-item .actions { display: flex; gap: 6px; }
 .chatlist-item .icon-button { width: 32px; height: 32px; }
@@ -344,7 +344,7 @@ body {
     gap: 8px; 
     padding: 10px 16px;
     font-weight: 500;
-    font-size: 14px;
+    font-size: 15px;
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
     color: white;
     border: none;
@@ -367,7 +367,7 @@ body {
     padding: 8px 12px; 
     border-radius: 6px; 
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     transition: all 0.2s ease;
 }
@@ -567,9 +567,9 @@ body {
     border-radius: 12px;
     max-width: 85%;
     word-wrap: break-word;
-    line-height: 1.5;
+    line-height: 1.6;
     position: relative;
-    font-size: 14px;
+    font-size: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -716,7 +716,7 @@ body {
     padding: 2px 6px;
     border-radius: 4px;
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 1rem;
+    font-size: 15px;
 }
 
 .dark .text code:not(pre code) {
@@ -731,7 +731,7 @@ body {
     padding: 18px 18px 18px 18px;
     margin: 18px 0;
     overflow-x: auto;
-    font-size: 1rem;
+    font-size: 15px;
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     max-width: 100%;
@@ -741,7 +741,7 @@ body {
     padding: 0;
     border-radius: 0;
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 1rem;
+    font-size: 15px;
     color: #222;
     display: block;
     white-space: pre;
@@ -754,7 +754,7 @@ body {
 .dark .text pre code {
     color: #e2e8f0;
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 1rem;
+    font-size: 15px;
 }
 
 .text ul {
@@ -807,7 +807,7 @@ body {
     width: 100%;
     border-collapse: collapse;
     margin: 12px 0;
-    font-size: 0.95em;
+    font-size: 15px;
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -845,7 +845,7 @@ body {
 }
 
 .message-time {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-muted);
     margin-top: 6px;
     text-align: right;
@@ -917,7 +917,7 @@ body {
 }
 
 .voice-status {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
     font-weight: 400;
     min-width: 100px;
@@ -951,13 +951,13 @@ body {
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 14px;
-    font-size: 14px;
+    font-size: 16px;
     resize: vertical;
     font-family: inherit;
     transition: border-color 0.2s ease;
     background: var(--bg-surface);
     color: var(--text-primary);
-    line-height: 1.4;
+    line-height: 1.5;
     min-height: 40px;
     max-height: 120px;
 }
@@ -1071,7 +1071,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.9rem;
+    font-size: 14px;
     color: var(--text-secondary);
     cursor: pointer;
     user-select: none;
@@ -1088,7 +1088,7 @@ body {
     border-radius: 8px;
     background: transparent;
     color: var(--danger);
-    font-size: 0.9rem;
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
